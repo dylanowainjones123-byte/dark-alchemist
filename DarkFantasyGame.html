@@ -38,6 +38,82 @@
             image-rendering: crisp-edges;
         }
 
+        #menuContainer {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .menu {
+            background: linear-gradient(135deg, #0a0e27 0%, #1a1a3e 100%);
+            border: 4px solid #4a0080;
+            border-radius: 8px;
+            padding: 40px;
+            box-shadow: 0 0 30px rgba(138, 43, 226, 0.5);
+            text-align: center;
+        }
+
+        .menu h1 {
+            color: #8a2be2;
+            margin-bottom: 30px;
+            font-size: 32px;
+            text-shadow: 0 0 10px rgba(138, 43, 226, 0.7);
+        }
+
+        .menu h2 {
+            color: #00ff88;
+            margin-bottom: 20px;
+            font-size: 20px;
+        }
+
+        .button-group {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            min-width: 300px;
+        }
+
+        .menu-button {
+            background: linear-gradient(135deg, #4a0080 0%, #2a0050 100%);
+            border: 2px solid #8a2be2;
+            color: #00ff88;
+            padding: 15px 30px;
+            font-size: 16px;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: all 0.3s;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .menu-button:hover {
+            background: linear-gradient(135deg, #6a0080 0%, #4a0060 100%);
+            box-shadow: 0 0 20px rgba(138, 43, 226, 0.8);
+            transform: translateY(-2px);
+        }
+
+        .menu-button:active {
+            transform: translateY(0);
+        }
+
+        #gameContainer.hidden {
+            display: none;
+        }
+
+        #inventoryContainer.hidden {
+            display: none;
+        }
+
+        #hudContainer.hidden {
+            display: none;
+        }
+
         #hudContainer {
             position: absolute;
             top: 8px;
@@ -238,6 +314,30 @@
     </style>
 </head>
 <body>
+    <!-- MENUS -->
+    <div id="menuContainer">
+        <div class="menu">
+            <h1>DARK FANTASY GAME</h1>
+            <h2>Select Game Mode</h2>
+            <div class="button-group">
+                <button class="menu-button" onclick="selectGameMode('survival')">SURVIVAL</button>
+                <button class="menu-button" onclick="selectGameMode('boss-rush')">BOSS RUSH</button>
+            </div>
+        </div>
+
+        <div id="characterMenu" class="menu" style="display: none;">
+            <h2>Select Character</h2>
+            <div class="button-group">
+                <button class="menu-button" onclick="selectCharacter('deej')">DEEJ - Balanced</button>
+                <button class="menu-button" onclick="selectCharacter('briggs')">BRIGGS - Tanky</button>
+                <button class="menu-button" onclick="selectCharacter('lotfy')">LOTFY - Speedy</button>
+                <button class="menu-button" onclick="selectCharacter('tom')">TOM - Heavy Hitter</button>
+                <button class="menu-button" onclick="selectCharacter('poe')">POE - Defensive</button>
+                <button class="menu-button" onclick="selectCharacter('beef')">BEEF - Aggressive</button>
+                <button class="menu-button" onclick="selectCharacter('smatty')">SMATTY - Lucky</button>
+            </div>
+        </div>
+    </div>
     <div id="gameContainer">
         <canvas id="gameCanvas"></canvas>
 
@@ -302,6 +402,106 @@
     </div>
 
     <script>
+        // ============================================================
+        // GLOBAL GAME STATE & FUNCTIONS
+        // ============================================================
+
+        let selectedGameMode = null;
+        let selectedCharacterType = null;
+
+        function selectGameMode(mode) {
+            selectedGameMode = mode;
+            document.getElementById('characterMenu').style.display = 'block';
+        }
+
+        function selectCharacter(characterType) {
+            selectedCharacterType = characterType;
+            document.getElementById('menuContainer').classList.add('hidden');
+            document.getElementById('gameContainer').classList.remove('hidden');
+            document.getElementById('hudContainer').classList.remove('hidden');
+            document.getElementById('inventoryContainer').classList.remove('hidden');
+            const canvas = document.getElementById('gameCanvas');
+            const game = new Game(canvas, selectedGameMode, selectedCharacterType);
+        }
+
+        // ============================================================
+        // CHARACTER PROFILES
+        // ============================================================
+
+        const CHARACTER_PROFILES = {
+            deej: {
+                name: 'Deej',
+                baseHp: 100,
+                baseSpeed: 2.0,
+                baseDamage: 10,
+                baseDefense: 1.0,
+                passive: 'Balanced Fighter - Slightly faster attack speed (1.1x)'
+            },
+            briggs: {
+                name: 'Briggs',
+                baseHp: 140,
+                baseSpeed: 1.5,
+                baseDamage: 8,
+                baseDefense: 1.3,
+                passive: 'Iron Skin - Takes 30% less damage'
+            },
+            lotfy: {
+                name: 'Lotfy',
+                baseHp: 80,
+                baseSpeed: 2.8,
+                baseDamage: 9,
+                baseDefense: 0.9,
+                passive: 'Swift - 40% faster movement'
+            },
+            tom: {
+                name: 'Tom',
+                baseHp: 110,
+                baseSpeed: 1.8,
+                baseDamage: 14,
+                baseDefense: 0.95,
+                passive: 'Crusher - Deals 40% more damage to enemies'
+            },
+            poe: {
+                name: 'Poe',
+                baseHp: 120,
+                baseSpeed: 1.9,
+                baseDamage: 9,
+                baseDefense: 1.25,
+                passive: 'Guardian - 25% defense boost, gains extra 10% per active buff'
+            },
+            beef: {
+                name: 'Beef',
+                baseHp: 130,
+                baseSpeed: 2.1,
+                baseDamage: 13,
+                baseDefense: 1.05,
+                passive: 'Brawler - Damage increases by 5% for every enemy nearby'
+            },
+            smatty: {
+                name: 'Smatty',
+                baseHp: 95,
+                baseSpeed: 2.0,
+                baseDamage: 11,
+                baseDefense: 1.0,
+                passive: 'Lucky - 20% chance to deal double damage and gain random buffs'
+            }
+        };
+
+        // ============================================================
+        // BOSS RUSH SEQUENCE
+        // ============================================================
+
+        const BOSS_RUSH_SEQUENCE = [
+            { name: 'Zombie Knight', type: 'knight', level: 5, hp: 200 },
+            { name: 'Spectral Wraith', type: 'wraith', level: 6, hp: 180 },
+            { name: 'Stone Golem', type: 'golem', level: 7, hp: 250 },
+            { name: 'Shadow Assassin', type: 'assassin', level: 8, hp: 160 },
+            { name: 'Plague Master', type: 'plagueWarden', level: 9, hp: 220 },
+            { name: 'Corrupted Knight', type: 'knight', level: 10, hp: 280 },
+            { name: 'Void Wraith', type: 'wraith', level: 11, hp: 240 },
+            { name: 'Archstone Golem', type: 'golem', level: 12, hp: 350 }
+        ];
+
         // ============================================================
         // GAME CONSTANTS & CONFIGURATION
         // ============================================================
@@ -920,14 +1120,23 @@
         // ============================================================
 
         class Player {
-            constructor(x, y) {
+            constructor(x, y, characterType = 'deej') {
                 this.x = x;
                 this.y = y;
                 this.width = 12;
                 this.height = 12;
-                this.speed = 2;
-                this.hp = 100;
-                this.maxHp = 100;
+                this.characterType = characterType;
+
+                // Load character profile
+                const profile = CHARACTER_PROFILES[characterType] || CHARACTER_PROFILES.deej;
+                this.characterName = profile.name;
+                this.baseSpeed = profile.baseSpeed;
+                this.baseDamage = profile.baseDamage;
+                this.baseDefense = profile.baseDefense;
+                this.speed = profile.baseSpeed;
+
+                this.hp = profile.baseHp;
+                this.maxHp = profile.baseHp;
                 this.activeBuffs = [];
                 this.inventory = {
                     beer: 3,
@@ -1023,16 +1232,36 @@
 
             getSpeed() {
                 let speedMult = 1.0;
+
+                // Character passive: Lotfy gets speed boost
+                if (this.characterType === 'lotfy') {
+                    speedMult *= 1.4;
+                }
+
                 this.activeBuffs.forEach(buff => {
                     speedMult *= buff.effect.speed;
                 });
-                return this.speed * speedMult;
+                return this.baseSpeed * speedMult;
             }
 
-            getDamage() {
-                let baseDamage = 10;
+            getDamage(game = null) {
+                let baseDamage = this.baseDamage;
                 let damageMult = 1.0;
-                let attackSpeedMult = 1.0;
+
+                // Character passives
+                if (this.characterType === 'deej') {
+                    damageMult *= 1.1; // Slightly faster attack speed
+                } else if (this.characterType === 'tom') {
+                    damageMult *= 1.4; // Crusher - 40% more damage
+                } else if (this.characterType === 'beef' && game) {
+                    // Brawler - damage increases by 5% per nearby enemy
+                    const nearbyCount = game.getNearbyEnemyCount();
+                    damageMult *= (1.0 + nearbyCount * 0.05);
+                } else if (this.characterType === 'smatty') {
+                    // Lucky - chance for double damage (checked per hit in combat)
+                    // Base damage is slightly higher
+                    damageMult *= 1.05;
+                }
 
                 this.activeBuffs.forEach(buff => {
                     damageMult *= buff.effect.damage;
@@ -1042,10 +1271,20 @@
             }
 
             getDefense() {
-                let defenseMult = 1.0;
+                let defenseMult = this.baseDefense;
+
+                // Character passives
+                if (this.characterType === 'briggs') {
+                    defenseMult *= 1.3; // Iron Skin - takes 30% less damage
+                } else if (this.characterType === 'poe') {
+                    defenseMult *= 1.25; // Guardian base
+                    defenseMult += (this.activeBuffs.length * 0.1); // Extra 10% per active buff
+                }
+
                 this.activeBuffs.forEach(buff => {
                     defenseMult *= buff.effect.defense;
                 });
+
                 return defenseMult;
             }
 
@@ -1091,6 +1330,26 @@
                             defense: substance.defense
                         }
                     });
+                }
+
+                // Smatty's Lucky passive - 20% chance to gain an extra random buff
+                if (this.characterType === 'smatty' && Math.random() < 0.2) {
+                    const substanceTypes = Object.keys(SUBSTANCES);
+                    const randomType = substanceTypes[Math.floor(Math.random() * substanceTypes.length)];
+                    if (randomType !== type) {
+                        const randomSubstance = SUBSTANCES[randomType];
+                        this.activeBuffs.push({
+                            type: randomType,
+                            name: randomSubstance.name,
+                            duration: randomSubstance.duration * 0.5,
+                            maxDuration: randomSubstance.duration * 0.5,
+                            effect: {
+                                damage: randomSubstance.damage,
+                                speed: randomSubstance.speed,
+                                defense: randomSubstance.defense
+                            }
+                        });
+                    }
                 }
             }
 
@@ -1350,7 +1609,7 @@
         // ============================================================
 
         class Game {
-            constructor(canvas) {
+            constructor(canvas, gameMode = 'survival', characterType = 'deej') {
                 this.canvas = canvas;
                 this.ctx = canvas.getContext('2d');
                 this.running = false;
@@ -1360,15 +1619,26 @@
                 this.startTime = 0;
                 this.elapsedTime = 0;
                 this.lastFrameTime = 0;
+                this.gameMode = gameMode || 'survival';
+                this.characterType = characterType || 'deej';
 
                 this.tilemap = new Tilemap(GRID_WIDTH, GRID_HEIGHT);
-                this.player = new Player(GRID_WIDTH / 2 * TILE_SIZE, GRID_HEIGHT / 2 * TILE_SIZE);
+                this.player = new Player(GRID_WIDTH / 2 * TILE_SIZE, GRID_HEIGHT / 2 * TILE_SIZE, this.characterType);
                 this.enemies = [];
                 this.substances = [];
                 this.killCount = 0;
                 this.level = 1;
-                this.winCondition = 10; // Defeat 10 enemies per level
-                this.surviveDuration = 300;
+                this.bossCount = 0;
+                this.currentBossIndex = 0;
+
+                if (this.gameMode === 'boss-rush') {
+                    this.winCondition = BOSS_RUSH_SEQUENCE.length; // Defeat all bosses
+                    this.surviveDuration = 600; // 10 minutes
+                } else {
+                    this.winCondition = 10; // Defeat 10 enemies per level
+                    this.surviveDuration = 300; // 5 minutes
+                }
+
                 this.screenShake = 0;
                 this.particleSystem = new ParticleSystem();
                 this.spriteSheet = new SpriteSheet();
@@ -1402,18 +1672,43 @@
             }
 
             spawnInitialEnemies() {
-                const spawnCount = 3 + this.level;
-                for (let i = 0; i < spawnCount; i++) {
-                    const types = ['zombie', 'zombie', 'knight', 'wraith', 'golem', 'assassin', 'plagueWarden'];
-                    const type = types[Math.floor(Math.random() * types.length)];
-                    let x, y;
-                    do {
-                        x = Math.random() * (GRID_WIDTH - 4) * TILE_SIZE + 2 * TILE_SIZE;
-                        y = Math.random() * (GRID_HEIGHT - 4) * TILE_SIZE + 2 * TILE_SIZE;
-                    } while (!this.tilemap.isWalkable(x, y) ||
-                             Math.hypot(x - this.player.x, y - this.player.y) < 100);
-                    this.enemies.push(new Enemy(x, y, type, this.level));
+                if (this.gameMode === 'boss-rush') {
+                    // Boss Rush: spawn first boss
+                    this.spawnBoss(0);
+                } else {
+                    // Survival: spawn multiple normal enemies
+                    const spawnCount = 3 + this.level;
+                    for (let i = 0; i < spawnCount; i++) {
+                        const types = ['zombie', 'zombie', 'knight', 'wraith', 'golem', 'assassin', 'plagueWarden'];
+                        const type = types[Math.floor(Math.random() * types.length)];
+                        let x, y;
+                        do {
+                            x = Math.random() * (GRID_WIDTH - 4) * TILE_SIZE + 2 * TILE_SIZE;
+                            y = Math.random() * (GRID_HEIGHT - 4) * TILE_SIZE + 2 * TILE_SIZE;
+                        } while (!this.tilemap.isWalkable(x, y) ||
+                                 Math.hypot(x - this.player.x, y - this.player.y) < 100);
+                        this.enemies.push(new Enemy(x, y, type, this.level));
+                    }
                 }
+            }
+
+            spawnBoss(bossIndex) {
+                if (bossIndex >= BOSS_RUSH_SEQUENCE.length) return;
+
+                const bossData = BOSS_RUSH_SEQUENCE[bossIndex];
+                let x, y;
+                do {
+                    x = Math.random() * (GRID_WIDTH - 4) * TILE_SIZE + 2 * TILE_SIZE;
+                    y = Math.random() * (GRID_HEIGHT - 4) * TILE_SIZE + 2 * TILE_SIZE;
+                } while (!this.tilemap.isWalkable(x, y) ||
+                         Math.hypot(x - this.player.x, y - this.player.y) < 100);
+
+                const boss = new Enemy(x, y, bossData.type, bossData.level);
+                boss.hp = bossData.hp;
+                boss.maxHp = bossData.hp;
+                boss.isBoss = true;
+                boss.bossName = bossData.name;
+                this.enemies.push(boss);
             }
 
             spawnEnemy() {
@@ -1426,6 +1721,16 @@
                 } while (!this.tilemap.isWalkable(x, y) ||
                          Math.hypot(x - this.player.x, y - this.player.y) < 80);
                 this.enemies.push(new Enemy(x, y, type, this.level));
+            }
+
+            getNearbyEnemyCount() {
+                let count = 0;
+                const checkRadius = 150;
+                for (let enemy of this.enemies) {
+                    const dist = Math.hypot(enemy.x - this.player.x, enemy.y - this.player.y);
+                    if (dist < checkRadius) count++;
+                }
+                return count;
             }
 
             handleInput() {
@@ -1547,7 +1852,15 @@
                 for (let enemy of this.enemies) {
                     if (this.checkCollision(this.player, enemy)) {
                         if (this.player.attackCooldown <= 0) {
-                            const damage = this.player.getDamage() * (0.8 + Math.random() * 0.4);
+                            let baseDamage = this.player.getDamage(this);
+                            let damage = baseDamage * (0.8 + Math.random() * 0.4);
+
+                            // Smatty's Lucky passive - 20% chance for double damage
+                            if (this.player.characterType === 'smatty' && Math.random() < 0.2) {
+                                damage *= 2;
+                                this.particleSystem.spawn(enemy.x, enemy.y, 8, '#ffff00', 2, 80);
+                            }
+
                             enemy.takeDamage(damage);
                             enemy.applyKnockback(this.player.x, this.player.y, 20);
                             this.player.attackCooldown = 0.5;
@@ -1562,17 +1875,29 @@
                                 this.substances.push(new Substance(enemy.x, enemy.y, lootType));
                                 this.enemies.splice(this.enemies.indexOf(enemy), 1);
                                 this.killCount++;
-                                this.player.score += Math.floor(20 * (1 + (this.level - 1) * 0.5));
-                                this.screenShake = 0.1;
 
-                                // Level up check (every 10 kills)
-                                if (this.killCount % 10 === 0 && this.killCount > 0) {
-                                    this.levelUp();
-                                }
+                                if (enemy.isBoss) {
+                                    this.bossCount++;
+                                    this.player.score += Math.floor(100 * (1 + (this.bossCount - 1) * 0.5));
+                                    this.screenShake = 0.3;
 
-                                // Spawn new enemy if not at limit
-                                if (this.killCount < this.winCondition) {
-                                    setTimeout(() => this.spawnEnemy(), 500);
+                                    // Spawn next boss if available
+                                    if (this.bossCount < BOSS_RUSH_SEQUENCE.length) {
+                                        setTimeout(() => this.spawnBoss(this.bossCount), 1000);
+                                    }
+                                } else {
+                                    this.player.score += Math.floor(20 * (1 + (this.level - 1) * 0.5));
+                                    this.screenShake = 0.1;
+
+                                    // Level up check (every 10 kills)
+                                    if (this.killCount % 10 === 0 && this.killCount > 0) {
+                                        this.levelUp();
+                                    }
+
+                                    // Spawn new enemy if not at limit
+                                    if (this.killCount < this.winCondition) {
+                                        setTimeout(() => this.spawnEnemy(), 500);
+                                    }
                                 }
                             }
                         }
@@ -1586,12 +1911,20 @@
                 this.elapsedTime = (Date.now() - this.startTime) / 1000;
 
                 // Check win condition
-                if (this.killCount >= this.winCondition) {
-                    this.endGame(true);
-                } else if (this.elapsedTime >= this.surviveDuration) {
-                    this.endGame(true);
-                } else if (this.player.hp <= 0) {
-                    this.endGame(false);
+                if (this.gameMode === 'boss-rush') {
+                    if (this.bossCount >= BOSS_RUSH_SEQUENCE.length) {
+                        this.endGame(true);
+                    } else if (this.player.hp <= 0) {
+                        this.endGame(false);
+                    }
+                } else {
+                    if (this.killCount >= this.winCondition) {
+                        this.endGame(true);
+                    } else if (this.elapsedTime >= this.surviveDuration) {
+                        this.endGame(true);
+                    } else if (this.player.hp <= 0) {
+                        this.endGame(false);
+                    }
                 }
 
                 // Respawn substances if too few
@@ -1668,14 +2001,21 @@
                 const buffList = document.getElementById('buffList');
 
                 hpDisplay.textContent = `${Math.ceil(this.player.hp)}/${Math.ceil(this.player.maxHp)}`;
-                killsDisplay.textContent = `${this.killCount}/${this.winCondition}`;
+
+                // Show boss count in boss rush, normal kills in survival
+                if (this.gameMode === 'boss-rush') {
+                    killsDisplay.textContent = `Bosses: ${this.bossCount}/${BOSS_RUSH_SEQUENCE.length}`;
+                } else {
+                    killsDisplay.textContent = `${this.killCount}/${this.winCondition}`;
+                }
 
                 const minutes = Math.floor(this.elapsedTime / 60);
                 const seconds = Math.floor(this.elapsedTime % 60);
                 timeDisplay.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
 
                 // Add level and score info
-                let buffHTML = `<div style="color: #00ffff; font-size: 10px;">Level: ${this.level}</div>`;
+                let buffHTML = `<div style="color: #00ffff; font-size: 10px;">${this.player.characterName}</div>`;
+                buffHTML += `<div style="color: #00ffff; font-size: 10px;">Level: ${this.level}</div>`;
                 buffHTML += `<div style="color: #ffaa00; font-size: 10px;">Score: ${this.player.score}</div>`;
 
                 // Update buff list
@@ -1884,11 +2224,13 @@
         }
 
         // ============================================================
-        // INITIALIZE GAME
+        // INITIALIZE MENUS
         // ============================================================
 
-        const canvas = document.getElementById('gameCanvas');
-        const game = new Game(canvas);
+        // Hide game container by default
+        document.getElementById('gameContainer').classList.add('hidden');
+        document.getElementById('hudContainer').classList.add('hidden');
+        document.getElementById('inventoryContainer').classList.add('hidden');
     </script>
 </body>
 </html>

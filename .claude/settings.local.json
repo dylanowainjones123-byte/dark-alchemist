@@ -1,7 +1,10 @@
 {
   "permissions": {
     "allow": [
-      "Bash(node -c DarkFantasyGame.html)"
+      "Bash(node -c DarkFantasyGame.html)",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"Implement 7 playable characters and boss rush mode:*)",
+      "Bash(git push:*)"
     ]
   }
 }
