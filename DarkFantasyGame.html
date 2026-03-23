@@ -1,0 +1,1006 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dark Alchemist - Substance Dungeon Crawler</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #0a0e27 0%, #1a1a3e 100%);
+            font-family: 'Courier New', monospace;
+            color: #e0e0ff;
+        }
+
+        #gameContainer {
+            position: relative;
+            width: 512px;
+            height: 512px;
+            border: 4px solid #4a0080;
+            box-shadow: 0 0 30px rgba(138, 43, 226, 0.5), inset 0 0 20px rgba(138, 43, 226, 0.2);
+            background: #0a0a15;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+        }
+
+        #hudContainer {
+            position: absolute;
+            top: 8px;
+            left: 8px;
+            background: rgba(0, 0, 0, 0.7);
+            border: 2px solid #4a0080;
+            padding: 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            line-height: 1.4;
+        }
+
+        #hudContainer div {
+            margin: 2px 0;
+        }
+
+        .hud-label {
+            color: #8a2be2;
+            font-weight: bold;
+        }
+
+        .hud-value {
+            color: #00ff88;
+        }
+
+        .buff-list {
+            margin-top: 6px;
+            border-top: 1px solid #4a0080;
+            padding-top: 4px;
+        }
+
+        .buff-item {
+            color: #ffaa00;
+            font-size: 11px;
+        }
+
+        #inventoryContainer {
+            position: absolute;
+            bottom: 8px;
+            left: 8px;
+            background: rgba(0, 0, 0, 0.7);
+            border: 2px solid #4a0080;
+            padding: 6px;
+            border-radius: 4px;
+            display: flex;
+            gap: 8px;
+        }
+
+        .substance-slot {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            cursor: pointer;
+            padding: 4px;
+            border: 2px solid transparent;
+            border-radius: 2px;
+            transition: all 0.2s;
+            min-width: 50px;
+        }
+
+        .substance-slot:hover {
+            border-color: #8a2be2;
+            background: rgba(138, 43, 226, 0.2);
+        }
+
+        .substance-icon {
+            width: 24px;
+            height: 24px;
+            border-radius: 2px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            margin-bottom: 2px;
+            font-size: 10px;
+        }
+
+        .substance-count {
+            font-size: 10px;
+            color: #00ff88;
+            font-weight: bold;
+        }
+
+        .substance-name {
+            font-size: 8px;
+            color: #8a2be2;
+        }
+
+        #gameOverlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            z-index: 100;
+        }
+
+        #gameOverlay.active {
+            display: flex;
+        }
+
+        #overlayText {
+            color: #00ff88;
+            font-size: 32px;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 16px;
+            text-shadow: 0 0 10px #00ff88;
+        }
+
+        #overlaySubtext {
+            color: #8a2be2;
+            font-size: 16px;
+            margin-bottom: 20px;
+        }
+
+        #restartBtn {
+            padding: 10px 20px;
+            background: #4a0080;
+            color: #00ff88;
+            border: 2px solid #8a2be2;
+            border-radius: 4px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+
+        #restartBtn:hover {
+            background: #8a2be2;
+            box-shadow: 0 0 10px #8a2be2;
+        }
+
+        #mobileControls {
+            position: absolute;
+            bottom: 80px;
+            right: 8px;
+            display: none;
+            gap: 4px;
+        }
+
+        @media (max-width: 768px) {
+            #mobileControls {
+                display: grid;
+                grid-template-columns: repeat(3, 40px);
+                grid-template-rows: repeat(3, 40px);
+            }
+
+            .dpad-btn {
+                background: rgba(138, 43, 226, 0.5);
+                border: 1px solid #8a2be2;
+                color: #00ff88;
+                cursor: pointer;
+                border-radius: 2px;
+                font-weight: bold;
+            }
+
+            .dpad-btn:active {
+                background: #8a2be2;
+            }
+
+            #arrowUp { grid-column: 2; grid-row: 1; }
+            #arrowLeft { grid-column: 1; grid-row: 2; }
+            #arrowDown { grid-column: 2; grid-row: 3; }
+            #arrowRight { grid-column: 3; grid-row: 2; }
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <canvas id="gameCanvas"></canvas>
+
+        <div id="hudContainer">
+            <div><span class="hud-label">HP:</span> <span class="hud-value" id="hpDisplay">100/100</span></div>
+            <div><span class="hud-label">Kills:</span> <span class="hud-value" id="killsDisplay">0/10</span></div>
+            <div><span class="hud-label">Time:</span> <span class="hud-value" id="timeDisplay">0:00</span></div>
+            <div class="buff-list" id="buffList"></div>
+        </div>
+
+        <div id="inventoryContainer">
+            <div class="substance-slot" onclick="game.player.consumeSubstance('beer')">
+                <div class="substance-icon" style="background: #8b4513;">🍺</div>
+                <div class="substance-count" id="count-beer">0</div>
+                <div class="substance-name">BEER</div>
+            </div>
+            <div class="substance-slot" onclick="game.player.consumeSubstance('cigarettes')">
+                <div class="substance-icon" style="background: #666;">💨</div>
+                <div class="substance-count" id="count-cigarettes">0</div>
+                <div class="substance-name">CIGS</div>
+            </div>
+            <div class="substance-slot" onclick="game.player.consumeSubstance('shots')">
+                <div class="substance-icon" style="background: #4a4a6a;">🥃</div>
+                <div class="substance-count" id="count-shots">0</div>
+                <div class="substance-name">SHOTS</div>
+            </div>
+            <div class="substance-slot" onclick="game.player.consumeSubstance('snus')">
+                <div class="substance-icon" style="background: #9932cc;">📦</div>
+                <div class="substance-count" id="count-snus">0</div>
+                <div class="substance-name">SNUS</div>
+            </div>
+            <div class="substance-slot" onclick="game.player.consumeSubstance('line')">
+                <div class="substance-icon" style="background: #ffffff; color: #000;">⚪</div>
+                <div class="substance-count" id="count-line">0</div>
+                <div class="substance-name">LINE</div>
+            </div>
+        </div>
+
+        <div id="gameOverlay">
+            <div id="overlayText"></div>
+            <div id="overlaySubtext"></div>
+            <button id="restartBtn">RESTART GAME</button>
+        </div>
+
+        <div id="mobileControls">
+            <button class="dpad-btn" id="arrowUp">↑</button>
+            <button class="dpad-btn" id="arrowLeft">←</button>
+            <button class="dpad-btn" id="arrowDown">↓</button>
+            <button class="dpad-btn" id="arrowRight">→</button>
+        </div>
+    </div>
+
+    <script>
+        // ============================================================
+        // GAME CONSTANTS & CONFIGURATION
+        // ============================================================
+
+        const TILE_SIZE = 16;
+        const GRID_WIDTH = 32;
+        const GRID_HEIGHT = 32;
+
+        const SUBSTANCES = {
+            beer: { name: 'Beer', damage: 1.2, speed: 1.0, hp: 0, defense: 1.0, duration: 30, color: '#8b4513', maxStack: 5 },
+            cigarettes: { name: 'Cigarettes', damage: 1.0, speed: 1.15, hp: 0, defense: 1.0, duration: 40, color: '#cccccc', maxStack: 5 },
+            shots: { name: 'Shots', damage: 1.0, speed: 1.0, hp: 10, defense: 1.0, duration: 25, color: '#ffccaa', maxStack: 5 },
+            snus: { name: 'Snus', damage: 1.0, speed: 1.0, hp: 0, defense: 1.15, duration: 35, color: '#9932cc', maxStack: 5 },
+            line: { name: 'Ripping a Line', damage: 1.4, speed: 1.25, hp: 0, defense: 1.0, duration: 20, color: '#ffffff', maxStack: 2 }
+        };
+
+        const ENEMY_TYPES = {
+            zombie: { name: 'Corrupted Zombie', hp: 30, damage: 5, speed: 1, attackSpeed: 1, color: '#4a7c4e', loot: ['beer', 'shots'] },
+            knight: { name: 'Shadow Knight', hp: 25, damage: 8, speed: 1.5, attackSpeed: 1.2, color: '#2a2a4a', loot: ['snus', 'cigarettes'] },
+            wraith: { name: 'Void Wraith', hp: 15, damage: 10, speed: 2, attackSpeed: 1.5, color: '#5a3a7a', loot: ['line', 'shots'] }
+        };
+
+        // ============================================================
+        // TILEMAP CLASS
+        // ============================================================
+
+        class Tilemap {
+            constructor(width, height) {
+                this.width = width;
+                this.height = height;
+                this.tiles = this.generateDungeon();
+            }
+
+            generateDungeon() {
+                const tiles = [];
+                for (let y = 0; y < this.height; y++) {
+                    tiles[y] = [];
+                    for (let x = 0; x < this.width; x++) {
+                        if (y === 0 || y === this.height - 1 || x === 0 || x === this.width - 1) {
+                            tiles[y][x] = 1; // wall
+                        } else if (Math.random() < 0.08) {
+                            tiles[y][x] = 1; // random walls
+                        } else {
+                            tiles[y][x] = 0; // floor
+                        }
+                    }
+                }
+                return tiles;
+            }
+
+            isWalkable(x, y) {
+                const gridX = Math.floor(x / TILE_SIZE);
+                const gridY = Math.floor(y / TILE_SIZE);
+
+                if (gridX < 0 || gridX >= this.width || gridY < 0 || gridY >= this.height) return false;
+                return this.tiles[gridY][gridX] === 0;
+            }
+
+            render(ctx) {
+                for (let y = 0; y < this.height; y++) {
+                    for (let x = 0; x < this.width; x++) {
+                        const tileX = x * TILE_SIZE;
+                        const tileY = y * TILE_SIZE;
+
+                        if (this.tiles[y][x] === 1) {
+                            // Wall tile
+                            ctx.fillStyle = '#1a1a3e';
+                            ctx.fillRect(tileX, tileY, TILE_SIZE, TILE_SIZE);
+                            ctx.strokeStyle = '#4a0080';
+                            ctx.lineWidth = 1;
+                            ctx.strokeRect(tileX, tileY, TILE_SIZE, TILE_SIZE);
+
+                            // Add texture
+                            ctx.fillStyle = '#2a2a5e';
+                            ctx.fillRect(tileX + 2, tileY + 2, 4, 4);
+                            ctx.fillRect(tileX + 10, tileY + 10, 4, 4);
+                        } else {
+                            // Floor tile
+                            ctx.fillStyle = '#0a0a1a';
+                            ctx.fillRect(tileX, tileY, TILE_SIZE, TILE_SIZE);
+                            ctx.strokeStyle = '#2a2a4a';
+                            ctx.lineWidth = 0.5;
+                            ctx.strokeRect(tileX, tileY, TILE_SIZE, TILE_SIZE);
+                        }
+                    }
+                }
+            }
+        }
+
+        // ============================================================
+        // PLAYER CLASS
+        // ============================================================
+
+        class Player {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.width = 12;
+                this.height = 12;
+                this.speed = 2;
+                this.hp = 100;
+                this.maxHp = 100;
+                this.activeBuffs = [];
+                this.inventory = {
+                    beer: 3,
+                    cigarettes: 3,
+                    shots: 3,
+                    snus: 3,
+                    line: 1
+                };
+                this.attackCooldown = 0;
+                this.lastDirection = 'down';
+                this.animationFrame = 0;
+            }
+
+            move(direction, tilemap) {
+                let newX = this.x;
+                let newY = this.y;
+                const moveDistance = this.getSpeed();
+
+                switch(direction) {
+                    case 'up': newY -= moveDistance; this.lastDirection = 'up'; break;
+                    case 'down': newY += moveDistance; this.lastDirection = 'down'; break;
+                    case 'left': newX -= moveDistance; this.lastDirection = 'left'; break;
+                    case 'right': newX += moveDistance; this.lastDirection = 'right'; break;
+                }
+
+                // Check collision with corners
+                const corners = [
+                    [newX + 2, newY + 2],
+                    [newX + this.width - 2, newY + 2],
+                    [newX + 2, newY + this.height - 2],
+                    [newX + this.width - 2, newY + this.height - 2]
+                ];
+
+                let canMove = corners.every(([cx, cy]) => tilemap.isWalkable(cx, cy));
+
+                if (canMove) {
+                    this.x = newX;
+                    this.y = newY;
+                }
+
+                this.animationFrame = (this.animationFrame + 1) % 8;
+            }
+
+            getSpeed() {
+                let speedMult = 1.0;
+                this.activeBuffs.forEach(buff => {
+                    speedMult *= buff.effect.speed;
+                });
+                return this.speed * speedMult;
+            }
+
+            getDamage() {
+                let baseDamage = 10;
+                let damageMult = 1.0;
+                let attackSpeedMult = 1.0;
+
+                this.activeBuffs.forEach(buff => {
+                    damageMult *= buff.effect.damage;
+                });
+
+                return baseDamage * damageMult;
+            }
+
+            getDefense() {
+                let defenseMult = 1.0;
+                this.activeBuffs.forEach(buff => {
+                    defenseMult *= buff.effect.defense;
+                });
+                return defenseMult;
+            }
+
+            consumeSubstance(type) {
+                if (!this.inventory[type] || this.inventory[type] <= 0) return false;
+
+                const substance = SUBSTANCES[type];
+                if (!substance) return false;
+
+                // Heal if specified
+                if (substance.hp > 0) {
+                    this.hp = Math.min(this.hp + substance.hp, this.maxHp);
+                }
+
+                // Apply buff
+                this.applyBuff(type);
+
+                // Consume from inventory
+                this.inventory[type]--;
+
+                // Visual feedback
+                this.consumeEffect = true;
+                setTimeout(() => { this.consumeEffect = false; }, 200);
+
+                return true;
+            }
+
+            applyBuff(type) {
+                const substance = SUBSTANCES[type];
+                const existingBuff = this.activeBuffs.find(b => b.type === type);
+
+                if (existingBuff) {
+                    existingBuff.duration = substance.duration;
+                } else {
+                    this.activeBuffs.push({
+                        type: type,
+                        name: substance.name,
+                        duration: substance.duration,
+                        maxDuration: substance.duration,
+                        effect: {
+                            damage: substance.damage,
+                            speed: substance.speed,
+                            defense: substance.defense
+                        }
+                    });
+                }
+            }
+
+            updateBuffs(deltaTime) {
+                this.activeBuffs = this.activeBuffs.filter(buff => {
+                    buff.duration -= deltaTime;
+                    return buff.duration > 0;
+                });
+            }
+
+            takeDamage(amount) {
+                const defenseMult = this.getDefense();
+                const actualDamage = amount / defenseMult;
+                this.hp = Math.max(0, this.hp - actualDamage);
+            }
+
+            render(ctx) {
+                // Draw glow effect based on active buffs
+                if (this.activeBuffs.length > 0) {
+                    let glowColor = '#00ff88';
+                    let glowAlpha = 0.3;
+
+                    if (this.activeBuffs.some(b => b.type === 'line')) {
+                        glowColor = '#00ffff';
+                        glowAlpha = 0.6;
+                    } else if (this.activeBuffs.some(b => b.type === 'beer')) {
+                        glowColor = '#ff3300';
+                        glowAlpha = 0.4;
+                    }
+
+                    ctx.fillStyle = glowColor;
+                    ctx.globalAlpha = glowAlpha;
+                    ctx.beginPath();
+                    ctx.arc(this.x + this.width / 2, this.y + this.height / 2, 12, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.globalAlpha = 1;
+                }
+
+                // Draw player character
+                ctx.fillStyle = '#00ff88';
+                ctx.fillRect(this.x + 2, this.y + 2, this.width - 4, this.height - 4);
+
+                // Draw eyes direction
+                ctx.fillStyle = '#000000';
+                if (this.lastDirection === 'up') {
+                    ctx.fillRect(this.x + 4, this.y + 3, 2, 2);
+                    ctx.fillRect(this.x + 8, this.y + 3, 2, 2);
+                } else if (this.lastDirection === 'down') {
+                    ctx.fillRect(this.x + 4, this.y + 8, 2, 2);
+                    ctx.fillRect(this.x + 8, this.y + 8, 2, 2);
+                }
+
+                // Damage flash
+                if (this.consumeEffect) {
+                    ctx.strokeStyle = '#ffff00';
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(this.x, this.y, this.width, this.height);
+                }
+            }
+        }
+
+        // ============================================================
+        // ENEMY CLASS
+        // ============================================================
+
+        class Enemy {
+            constructor(x, y, type) {
+                this.x = x;
+                this.y = y;
+                this.width = 12;
+                this.height = 12;
+                this.type = type;
+                const enemyConfig = ENEMY_TYPES[type];
+                this.hp = enemyConfig.hp;
+                this.maxHp = enemyConfig.hp;
+                this.damage = enemyConfig.damage;
+                this.speed = enemyConfig.speed;
+                this.attackSpeed = enemyConfig.attackSpeed;
+                this.color = enemyConfig.color;
+                this.loot = enemyConfig.loot;
+                this.attackCooldown = 0;
+                this.direction = Math.random() > 0.5 ? 'left' : 'right';
+                this.changeDirectionTimer = 0;
+            }
+
+            update(player, tilemap, deltaTime) {
+                // Simple AI: wander and chase if close
+                const dx = player.x - this.x;
+                const dy = player.y - this.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+
+                this.changeDirectionTimer += deltaTime;
+                if (this.changeDirectionTimer > 2) {
+                    this.direction = Math.random() > 0.5 ? 'left' : 'right';
+                    this.changeDirectionTimer = 0;
+                }
+
+                if (distance < 100) {
+                    // Chase player
+                    if (Math.abs(dx) > Math.abs(dy)) {
+                        this.direction = dx > 0 ? 'right' : 'left';
+                    } else {
+                        this.direction = dy > 0 ? 'down' : 'up';
+                    }
+                }
+
+                // Move
+                let newX = this.x;
+                let newY = this.y;
+                const moveSpeed = this.speed * 0.5;
+
+                switch(this.direction) {
+                    case 'up': newY -= moveSpeed; break;
+                    case 'down': newY += moveSpeed; break;
+                    case 'left': newX -= moveSpeed; break;
+                    case 'right': newX += moveSpeed; break;
+                }
+
+                const corners = [
+                    [newX + 2, newY + 2],
+                    [newX + this.width - 2, newY + 2],
+                    [newX + 2, newY + this.height - 2],
+                    [newX + this.width - 2, newY + this.height - 2]
+                ];
+
+                if (corners.every(([cx, cy]) => tilemap.isWalkable(cx, cy))) {
+                    this.x = newX;
+                    this.y = newY;
+                }
+
+                // Attack cooldown
+                if (this.attackCooldown > 0) {
+                    this.attackCooldown -= deltaTime;
+                }
+            }
+
+            takeDamage(amount) {
+                this.hp = Math.max(0, this.hp - amount);
+            }
+
+            render(ctx) {
+                ctx.fillStyle = this.color;
+                ctx.fillRect(this.x + 2, this.y + 2, this.width - 4, this.height - 4);
+
+                // HP bar
+                const barWidth = this.width - 4;
+                const barHeight = 2;
+                ctx.fillStyle = '#000000';
+                ctx.fillRect(this.x + 2, this.y - 4, barWidth, barHeight);
+                ctx.fillStyle = '#ff3333';
+                ctx.fillRect(this.x + 2, this.y - 4, (this.hp / this.maxHp) * barWidth, barHeight);
+            }
+        }
+
+        // ============================================================
+        // SUBSTANCE CLASS
+        // ============================================================
+
+        class Substance {
+            constructor(x, y, type) {
+                this.x = x;
+                this.y = y;
+                this.width = 8;
+                this.height = 8;
+                this.type = type;
+                this.pulse = 0;
+            }
+
+            update(deltaTime) {
+                this.pulse += deltaTime * 3;
+            }
+
+            render(ctx) {
+                const substance = SUBSTANCES[this.type];
+                const scale = 1 + Math.sin(this.pulse) * 0.2;
+                const offsetX = this.x + (this.width / 2) * (1 - scale);
+                const offsetY = this.y + (this.height / 2) * (1 - scale);
+
+                ctx.fillStyle = substance.color;
+                ctx.globalAlpha = 0.8;
+                ctx.fillRect(
+                    offsetX,
+                    offsetY,
+                    this.width * scale,
+                    this.height * scale
+                );
+                ctx.globalAlpha = 1;
+
+                // Glow
+                ctx.strokeStyle = substance.color;
+                ctx.lineWidth = 1;
+                ctx.globalAlpha = 0.5;
+                ctx.strokeRect(
+                    offsetX - 1,
+                    offsetY - 1,
+                    this.width * scale + 2,
+                    this.height * scale + 2
+                );
+                ctx.globalAlpha = 1;
+            }
+        }
+
+        // ============================================================
+        // MAIN GAME CLASS
+        // ============================================================
+
+        class Game {
+            constructor(canvas) {
+                this.canvas = canvas;
+                this.ctx = canvas.getContext('2d');
+                this.running = false;
+                this.paused = false;
+                this.gameOver = false;
+                this.gameWon = false;
+                this.startTime = 0;
+                this.elapsedTime = 0;
+                this.lastFrameTime = 0;
+
+                this.tilemap = new Tilemap(GRID_WIDTH, GRID_HEIGHT);
+                this.player = new Player(GRID_WIDTH / 2 * TILE_SIZE, GRID_HEIGHT / 2 * TILE_SIZE);
+                this.enemies = [];
+                this.substances = [];
+                this.killCount = 0;
+                this.winCondition = 10; // Defeat 10 enemies OR survive 300 seconds
+                this.surviveDuration = 300;
+
+                this.keys = {};
+                this.init();
+            }
+
+            init() {
+                this.spawnInitialSubstances();
+                this.spawnInitialEnemies();
+                this.running = true;
+                this.startTime = Date.now();
+                this.attachEventListeners();
+                this.gameLoop();
+            }
+
+            spawnInitialSubstances() {
+                const substanceTypes = Object.keys(SUBSTANCES);
+                for (let i = 0; i < 15; i++) {
+                    const type = substanceTypes[Math.floor(Math.random() * substanceTypes.length)];
+                    let x, y;
+                    do {
+                        x = Math.random() * (GRID_WIDTH - 4) * TILE_SIZE + 2 * TILE_SIZE;
+                        y = Math.random() * (GRID_HEIGHT - 4) * TILE_SIZE + 2 * TILE_SIZE;
+                    } while (!this.tilemap.isWalkable(x, y));
+                    this.substances.push(new Substance(x, y, type));
+                }
+            }
+
+            spawnInitialEnemies() {
+                const enemyTypesList = Object.keys(ENEMY_TYPES);
+                for (let i = 0; i < 5; i++) {
+                    const type = i < 3 ? 'zombie' : (i < 4 ? 'knight' : 'wraith');
+                    let x, y;
+                    do {
+                        x = Math.random() * (GRID_WIDTH - 4) * TILE_SIZE + 2 * TILE_SIZE;
+                        y = Math.random() * (GRID_HEIGHT - 4) * TILE_SIZE + 2 * TILE_SIZE;
+                    } while (!this.tilemap.isWalkable(x, y) ||
+                             Math.hypot(x - this.player.x, y - this.player.y) < 100);
+                    this.enemies.push(new Enemy(x, y, type));
+                }
+            }
+
+            spawnEnemy() {
+                const type = Math.random() < 0.6 ? 'zombie' : (Math.random() < 0.7 ? 'knight' : 'wraith');
+                let x, y;
+                do {
+                    x = Math.random() * (GRID_WIDTH - 4) * TILE_SIZE + 2 * TILE_SIZE;
+                    y = Math.random() * (GRID_HEIGHT - 4) * TILE_SIZE + 2 * TILE_SIZE;
+                } while (!this.tilemap.isWalkable(x, y) ||
+                         Math.hypot(x - this.player.x, y - this.player.y) < 80);
+                this.enemies.push(new Enemy(x, y, type));
+            }
+
+            handleInput() {
+                if (this.keys['ArrowUp'] || this.keys['w'] || this.keys['W']) {
+                    this.player.move('up', this.tilemap);
+                }
+                if (this.keys['ArrowDown'] || this.keys['s'] || this.keys['S']) {
+                    this.player.move('down', this.tilemap);
+                }
+                if (this.keys['ArrowLeft'] || this.keys['a'] || this.keys['A']) {
+                    this.player.move('left', this.tilemap);
+                }
+                if (this.keys['ArrowRight'] || this.keys['d'] || this.keys['D']) {
+                    this.player.move('right', this.tilemap);
+                }
+            }
+
+            update(deltaTime) {
+                if (this.gameOver || this.gameWon) return;
+
+                this.handleInput();
+                this.player.updateBuffs(deltaTime);
+
+                // Update enemies
+                for (let enemy of this.enemies) {
+                    enemy.update(this.player, this.tilemap, deltaTime);
+
+                    // Check collision with player
+                    if (this.checkCollision(this.player, enemy)) {
+                        if (enemy.attackCooldown <= 0) {
+                            this.player.takeDamage(enemy.damage);
+                            enemy.attackCooldown = 1 / enemy.attackSpeed;
+                        }
+                    }
+                }
+
+                // Update substances
+                for (let substance of this.substances) {
+                    substance.update(deltaTime);
+
+                    if (this.checkCollision(this.player, substance)) {
+                        this.player.inventory[substance.type]++;
+                        this.substances.splice(this.substances.indexOf(substance), 1);
+                    }
+                }
+
+                // Combat: player attacks enemies
+                for (let enemy of this.enemies) {
+                    if (this.checkCollision(this.player, enemy)) {
+                        if (this.player.attackCooldown <= 0) {
+                            const damage = this.player.getDamage() * (0.8 + Math.random() * 0.4);
+                            enemy.takeDamage(damage);
+                            this.player.attackCooldown = 0.5;
+
+                            if (enemy.hp <= 0) {
+                                // Drop loot
+                                const lootType = enemy.loot[Math.floor(Math.random() * enemy.loot.length)];
+                                this.substances.push(new Substance(enemy.x, enemy.y, lootType));
+                                this.enemies.splice(this.enemies.indexOf(enemy), 1);
+                                this.killCount++;
+
+                                // Spawn new enemy
+                                if (this.killCount < this.winCondition) {
+                                    setTimeout(() => this.spawnEnemy(), 500);
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if (this.player.attackCooldown > 0) {
+                    this.player.attackCooldown -= deltaTime;
+                }
+
+                this.elapsedTime = (Date.now() - this.startTime) / 1000;
+
+                // Check win condition
+                if (this.killCount >= this.winCondition) {
+                    this.endGame(true);
+                } else if (this.elapsedTime >= this.surviveDuration) {
+                    this.endGame(true);
+                } else if (this.player.hp <= 0) {
+                    this.endGame(false);
+                }
+
+                // Respawn substances if too few
+                if (this.substances.length < 8) {
+                    const substanceTypes = Object.keys(SUBSTANCES);
+                    const type = substanceTypes[Math.floor(Math.random() * substanceTypes.length)];
+                    let x, y;
+                    do {
+                        x = Math.random() * (GRID_WIDTH - 4) * TILE_SIZE + 2 * TILE_SIZE;
+                        y = Math.random() * (GRID_HEIGHT - 4) * TILE_SIZE + 2 * TILE_SIZE;
+                    } while (!this.tilemap.isWalkable(x, y));
+                    this.substances.push(new Substance(x, y, type));
+                }
+            }
+
+            checkCollision(obj1, obj2) {
+                return obj1.x < obj2.x + obj2.width &&
+                       obj1.x + obj1.width > obj2.x &&
+                       obj1.y < obj2.y + obj2.height &&
+                       obj1.y + obj1.height > obj2.y;
+            }
+
+            render() {
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
+                // Render tilemap
+                this.tilemap.render(this.ctx);
+
+                // Render substances
+                for (let substance of this.substances) {
+                    substance.render(this.ctx);
+                }
+
+                // Render enemies
+                for (let enemy of this.enemies) {
+                    enemy.render(this.ctx);
+                }
+
+                // Render player
+                this.player.render(this.ctx);
+
+                // Update UI
+                this.updateUI();
+            }
+
+            updateUI() {
+                const hpDisplay = document.getElementById('hpDisplay');
+                const killsDisplay = document.getElementById('killsDisplay');
+                const timeDisplay = document.getElementById('timeDisplay');
+                const buffList = document.getElementById('buffList');
+
+                hpDisplay.textContent = `${Math.ceil(this.player.hp)}/100`;
+                killsDisplay.textContent = `${this.killCount}/${this.winCondition}`;
+
+                const minutes = Math.floor(this.elapsedTime / 60);
+                const seconds = Math.floor(this.elapsedTime % 60);
+                timeDisplay.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+
+                // Update buff list
+                buffList.innerHTML = this.player.activeBuffs.length > 0
+                    ? '<div style="color: #8a2be2; font-size: 10px; margin-bottom: 2px;">ACTIVE BUFFS:</div>'
+                    : '';
+
+                for (let buff of this.player.activeBuffs) {
+                    const buffDiv = document.createElement('div');
+                    buffDiv.className = 'buff-item';
+                    buffDiv.textContent = `${buff.name} (${buff.duration.toFixed(1)}s)`;
+                    buffList.appendChild(buffDiv);
+                }
+
+                // Update inventory counts
+                for (let type of Object.keys(SUBSTANCES)) {
+                    const countEl = document.getElementById(`count-${type}`);
+                    if (countEl) {
+                        countEl.textContent = this.player.inventory[type];
+                    }
+                }
+            }
+
+            endGame(won) {
+                this.running = false;
+                this.gameWon = won;
+
+                const overlay = document.getElementById('gameOverlay');
+                const overlayText = document.getElementById('overlayText');
+                const overlaySubtext = document.getElementById('overlaySubtext');
+
+                if (won) {
+                    overlayText.textContent = 'VICTORY!';
+                    overlaySubtext.textContent = `You survived! Kills: ${this.killCount} | Time: ${Math.floor(this.elapsedTime)}s`;
+                    overlayText.style.color = '#00ff88';
+                } else {
+                    overlayText.textContent = 'DEFEATED';
+                    overlaySubtext.textContent = `Final Stats: Kills: ${this.killCount} | Time: ${Math.floor(this.elapsedTime)}s`;
+                    overlayText.style.color = '#ff3333';
+                }
+
+                overlay.classList.add('active');
+            }
+
+            gameLoop = (currentTime) => {
+                const deltaTime = this.lastFrameTime ? (currentTime - this.lastFrameTime) / 1000 : 0;
+                this.lastFrameTime = currentTime;
+
+                if (this.running) {
+                    this.update(deltaTime);
+                }
+
+                this.render();
+                requestAnimationFrame(this.gameLoop);
+            }
+
+            attachEventListeners() {
+                document.addEventListener('keydown', (e) => {
+                    this.keys[e.key] = true;
+
+                    // Quick substance consumption with number keys
+                    const substanceKeys = {
+                        '1': 'beer',
+                        '2': 'cigarettes',
+                        '3': 'shots',
+                        '4': 'snus',
+                        '5': 'line'
+                    };
+
+                    if (substanceKeys[e.key]) {
+                        this.player.consumeSubstance(substanceKeys[e.key]);
+                    }
+                });
+
+                document.addEventListener('keyup', (e) => {
+                    this.keys[e.key] = false;
+                });
+
+                // Mobile controls
+                const setupTouchControl = (buttonId, key) => {
+                    const btn = document.getElementById(buttonId);
+                    if (btn) {
+                        btn.addEventListener('touchstart', () => { this.keys[key] = true; });
+                        btn.addEventListener('touchend', () => { this.keys[key] = false; });
+                        btn.addEventListener('mousedown', () => { this.keys[key] = true; });
+                        btn.addEventListener('mouseup', () => { this.keys[key] = false; });
+                    }
+                };
+
+                setupTouchControl('arrowUp', 'ArrowUp');
+                setupTouchControl('arrowDown', 'ArrowDown');
+                setupTouchControl('arrowLeft', 'ArrowLeft');
+                setupTouchControl('arrowRight', 'ArrowRight');
+
+                // Restart button
+                document.getElementById('restartBtn').addEventListener('click', () => {
+                    location.reload();
+                });
+            }
+        }
+
+        // ============================================================
+        // INITIALIZE GAME
+        // ============================================================
+
+        const canvas = document.getElementById('gameCanvas');
+        const game = new Game(canvas);
+    </script>
+</body>
+</html>
