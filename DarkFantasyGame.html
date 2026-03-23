@@ -126,6 +126,32 @@
             color: #8a2be2;
         }
 
+        #abilitiesContainer {
+            position: absolute;
+            bottom: 8px;
+            right: 8px;
+            background: rgba(0, 0, 0, 0.7);
+            border: 2px solid #4a0080;
+            padding: 6px;
+            border-radius: 4px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            font-size: 11px;
+        }
+
+        .ability-item {
+            color: #00ff88;
+            padding: 2px 4px;
+            border: 1px solid #8a2be2;
+            border-radius: 2px;
+        }
+
+        .ability-item.cooldown {
+            color: #666666;
+            opacity: 0.5;
+        }
+
         #gameOverlay {
             position: absolute;
             top: 0;
@@ -262,6 +288,12 @@
             <button class="dpad-btn" id="arrowDown">↓</button>
             <button class="dpad-btn" id="arrowRight">→</button>
         </div>
+
+        <div id="abilitiesContainer">
+            <div class="ability-item" id="ability-dash">SPACE: Dash</div>
+            <div class="ability-item" id="ability-cleave">E: Cleave</div>
+            <div class="ability-item" id="ability-heal">H: Heal</div>
+        </div>
     </div>
 
     <script>
@@ -282,9 +314,12 @@
         };
 
         const ENEMY_TYPES = {
-            zombie: { name: 'Corrupted Zombie', hp: 30, damage: 5, speed: 1, attackSpeed: 1, color: '#4a7c4e', loot: ['beer', 'shots'] },
-            knight: { name: 'Shadow Knight', hp: 25, damage: 8, speed: 1.5, attackSpeed: 1.2, color: '#2a2a4a', loot: ['snus', 'cigarettes'] },
-            wraith: { name: 'Void Wraith', hp: 15, damage: 10, speed: 2, attackSpeed: 1.5, color: '#5a3a7a', loot: ['line', 'shots'] }
+            zombie: { name: 'Corrupted Zombie', hp: 30, damage: 5, speed: 1, attackSpeed: 1, color: '#4a7c4e', loot: ['beer', 'shots'], spriteType: 'zombie' },
+            knight: { name: 'Shadow Knight', hp: 25, damage: 8, speed: 1.5, attackSpeed: 1.2, color: '#2a2a4a', loot: ['snus', 'cigarettes'], spriteType: 'knight' },
+            wraith: { name: 'Void Wraith', hp: 15, damage: 10, speed: 2, attackSpeed: 1.5, color: '#5a3a7a', loot: ['line', 'shots'], spriteType: 'wraith' },
+            golem: { name: 'Stone Golem', hp: 50, damage: 3, speed: 0.5, attackSpeed: 0.8, color: '#696969', loot: ['snus', 'beer'], spriteType: 'golem' },
+            assassin: { name: 'Void Assassin', hp: 10, damage: 12, speed: 3, attackSpeed: 1.8, color: '#2a0a4a', loot: ['line'], spriteType: 'assassin' },
+            plagueWarden: { name: 'Plague Warden', hp: 20, damage: 6, speed: 1.2, attackSpeed: 1.3, color: '#6b4423', loot: ['shots', 'cigarettes'], spriteType: 'plaguewarden', ranged: true }
         };
 
         // ============================================================
@@ -355,6 +390,174 @@
         }
 
         // ============================================================
+        // SPRITE SHEET SYSTEM
+        // ============================================================
+
+        class SpriteSheet {
+            constructor() {
+                this.sprites = {};
+                this.generateSprites();
+            }
+
+            generateSprites() {
+                // Create a temporary canvas for generating sprites
+                const tempCanvas = document.createElement('canvas');
+                tempCanvas.width = 16;
+                tempCanvas.height = 16;
+                const ctx = tempCanvas.getContext('2d');
+
+                // Player sprite
+                this.sprites.player = this.generatePlayerSprite();
+
+                // Enemy sprites
+                this.sprites.zombie = this.generateEnemySprite('#4a7c4e');
+                this.sprites.knight = this.generateEnemySprite('#2a2a4a');
+                this.sprites.wraith = this.generateEnemySprite('#5a3a7a');
+                this.sprites.golem = this.generateEnemySprite('#696969');
+                this.sprites.assassin = this.generateEnemySprite('#2a0a4a');
+                this.sprites.plaguewarden = this.generateEnemySprite('#6b4423');
+
+                // Substance sprites
+                this.sprites.substance = this.generateSubstanceSprite();
+            }
+
+            generatePlayerSprite() {
+                const canvas = document.createElement('canvas');
+                canvas.width = 64;
+                canvas.height = 16; // 4 frames of 16x16
+                const ctx = canvas.getContext('2d');
+
+                // Frame 0 - idle
+                ctx.fillStyle = '#00ff88';
+                ctx.fillRect(2, 2, 12, 12);
+                ctx.fillStyle = '#000000';
+                ctx.fillRect(4, 5, 2, 2);
+                ctx.fillRect(10, 5, 2, 2);
+
+                // Frames 1-3 - walk animation
+                for (let f = 1; f < 4; f++) {
+                    const xOffset = f * 16 + 2;
+                    ctx.fillStyle = '#00ff88';
+                    ctx.fillRect(xOffset, 2 + f * 0.5, 12, 12);
+                    ctx.fillStyle = '#000000';
+                    ctx.fillRect(xOffset + 2, 5, 2, 2);
+                    ctx.fillRect(xOffset + 8, 5, 2, 2);
+                }
+
+                return canvas;
+            }
+
+            generateEnemySprite(color) {
+                const canvas = document.createElement('canvas');
+                canvas.width = 48;
+                canvas.height = 16; // 3 frames
+                const ctx = canvas.getContext('2d');
+
+                // Frame 0 - idle
+                ctx.fillStyle = color;
+                ctx.fillRect(2, 3, 12, 10);
+                ctx.fillStyle = '#000000';
+                ctx.fillRect(4, 5, 2, 2);
+                ctx.fillRect(10, 5, 2, 2);
+
+                // Frame 1 - attack
+                ctx.fillStyle = color;
+                ctx.fillRect(18, 2, 12, 12);
+                ctx.fillStyle = '#000000';
+                ctx.fillRect(20, 4, 2, 2);
+                ctx.fillRect(26, 4, 2, 2);
+
+                // Frame 2 - hit
+                ctx.fillStyle = color;
+                ctx.fillRect(34, 3, 12, 10);
+                ctx.fillStyle = '#ff6600';
+                ctx.fillRect(36, 5, 2, 2);
+                ctx.fillRect(42, 5, 2, 2);
+
+                return canvas;
+            }
+
+            generateSubstanceSprite() {
+                const canvas = document.createElement('canvas');
+                canvas.width = 8;
+                canvas.height = 8;
+                const ctx = canvas.getContext('2d');
+                ctx.fillStyle = '#ffff88';
+                ctx.fillRect(1, 1, 6, 6);
+                ctx.strokeStyle = '#ffff00';
+                ctx.lineWidth = 1;
+                ctx.strokeRect(1, 1, 6, 6);
+                return canvas;
+            }
+
+            getSprite(type) {
+                return this.sprites[type] || this.sprites.player;
+            }
+        }
+
+        // ============================================================
+        // PARTICLE SYSTEM
+        // ============================================================
+
+        class Particle {
+            constructor(x, y, vx, vy, life, color, size) {
+                this.x = x;
+                this.y = y;
+                this.vx = vx;
+                this.vy = vy;
+                this.life = life;
+                this.maxLife = life;
+                this.color = color;
+                this.size = size;
+            }
+
+            update(deltaTime) {
+                this.x += this.vx * deltaTime;
+                this.y += this.vy * deltaTime;
+                this.vy += 50 * deltaTime; // gravity
+                this.life -= deltaTime;
+            }
+
+            render(ctx) {
+                const alpha = Math.max(0, this.life / this.maxLife);
+                ctx.globalAlpha = alpha;
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.globalAlpha = 1;
+            }
+        }
+
+        class ParticleSystem {
+            constructor() {
+                this.particles = [];
+            }
+
+            spawn(x, y, count, color, size, speed) {
+                for (let i = 0; i < count; i++) {
+                    const angle = (Math.PI * 2 * i) / count;
+                    const vx = Math.cos(angle) * speed;
+                    const vy = Math.sin(angle) * speed;
+                    this.particles.push(new Particle(x, y, vx, vy, 0.5, color, size));
+                }
+            }
+
+            update(deltaTime) {
+                this.particles = this.particles.filter(p => {
+                    p.update(deltaTime);
+                    return p.life > 0;
+                });
+            }
+
+            render(ctx) {
+                for (let p of this.particles) {
+                    p.render(ctx);
+                }
+            }
+        }
+
+        // ============================================================
         // PLAYER CLASS
         // ============================================================
 
@@ -378,6 +581,13 @@
                 this.attackCooldown = 0;
                 this.lastDirection = 'down';
                 this.animationFrame = 0;
+                this.knockbackVx = 0;
+                this.knockbackVy = 0;
+                this.dashCooldown = 0;
+                this.cleaveCooldown = 0;
+                this.healCooldown = 0;
+                this.level = 1;
+                this.score = 0;
             }
 
             move(direction, tilemap) {
@@ -408,6 +618,36 @@
                 }
 
                 this.animationFrame = (this.animationFrame + 1) % 8;
+            }
+
+            applyKnockback(fromX, fromY, force) {
+                const dx = this.x - fromX;
+                const dy = this.y - fromY;
+                const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+                this.knockbackVx = (dx / dist) * force;
+                this.knockbackVy = (dy / dist) * force;
+            }
+
+            updateKnockback(tilemap) {
+                if (Math.abs(this.knockbackVx) > 0.1 || Math.abs(this.knockbackVy) > 0.1) {
+                    let newX = this.x + this.knockbackVx;
+                    let newY = this.y + this.knockbackVy;
+
+                    const corners = [
+                        [newX + 2, newY + 2],
+                        [newX + this.width - 2, newY + 2],
+                        [newX + 2, newY + this.height - 2],
+                        [newX + this.width - 2, newY + this.height - 2]
+                    ];
+
+                    if (corners.every(([cx, cy]) => tilemap.isWalkable(cx, cy))) {
+                        this.x = newX;
+                        this.y = newY;
+                    }
+
+                    this.knockbackVx *= 0.92;
+                    this.knockbackVy *= 0.92;
+                }
             }
 
             getSpeed() {
@@ -546,16 +786,19 @@
         // ============================================================
 
         class Enemy {
-            constructor(x, y, type) {
+            constructor(x, y, type, level = 1) {
                 this.x = x;
                 this.y = y;
                 this.width = 12;
                 this.height = 12;
                 this.type = type;
                 const enemyConfig = ENEMY_TYPES[type];
-                this.hp = enemyConfig.hp;
-                this.maxHp = enemyConfig.hp;
-                this.damage = enemyConfig.damage;
+
+                // Scale stats by level
+                const levelMult = 1 + (level - 1) * 0.2;
+                this.hp = enemyConfig.hp * levelMult;
+                this.maxHp = this.hp;
+                this.damage = enemyConfig.damage * levelMult;
                 this.speed = enemyConfig.speed;
                 this.attackSpeed = enemyConfig.attackSpeed;
                 this.color = enemyConfig.color;
@@ -563,9 +806,35 @@
                 this.attackCooldown = 0;
                 this.direction = Math.random() > 0.5 ? 'left' : 'right';
                 this.changeDirectionTimer = 0;
+                this.knockbackVx = 0;
+                this.knockbackVy = 0;
+                this.animationFrame = 0;
+                this.isRanged = enemyConfig.ranged || false;
+                this.level = level;
             }
 
             update(player, tilemap, deltaTime) {
+                // Apply knockback
+                if (Math.abs(this.knockbackVx) > 0.1 || Math.abs(this.knockbackVy) > 0.1) {
+                    let newX = this.x + this.knockbackVx;
+                    let newY = this.y + this.knockbackVy;
+
+                    const corners = [
+                        [newX + 2, newY + 2],
+                        [newX + this.width - 2, newY + 2],
+                        [newX + 2, newY + this.height - 2],
+                        [newX + this.width - 2, newY + this.height - 2]
+                    ];
+
+                    if (corners.every(([cx, cy]) => tilemap.isWalkable(cx, cy))) {
+                        this.x = newX;
+                        this.y = newY;
+                    }
+
+                    this.knockbackVx *= 0.92;
+                    this.knockbackVy *= 0.92;
+                }
+
                 // Simple AI: wander and chase if close
                 const dx = player.x - this.x;
                 const dy = player.y - this.y;
@@ -577,7 +846,8 @@
                     this.changeDirectionTimer = 0;
                 }
 
-                if (distance < 100) {
+                const chaseDistance = this.isRanged ? 150 : 100;
+                if (distance < chaseDistance) {
                     // Chase player
                     if (Math.abs(dx) > Math.abs(dy)) {
                         this.direction = dx > 0 ? 'right' : 'left';
@@ -614,6 +884,16 @@
                 if (this.attackCooldown > 0) {
                     this.attackCooldown -= deltaTime;
                 }
+
+                this.animationFrame = (this.animationFrame + 1) % 8;
+            }
+
+            applyKnockback(fromX, fromY, force) {
+                const dx = this.x - fromX;
+                const dy = this.y - fromY;
+                const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+                this.knockbackVx = (dx / dist) * force;
+                this.knockbackVy = (dy / dist) * force;
             }
 
             takeDamage(amount) {
@@ -703,8 +983,14 @@
                 this.enemies = [];
                 this.substances = [];
                 this.killCount = 0;
-                this.winCondition = 10; // Defeat 10 enemies OR survive 300 seconds
+                this.level = 1;
+                this.winCondition = 10; // Defeat 10 enemies per level
                 this.surviveDuration = 300;
+                this.screenShake = 0;
+                this.particleSystem = new ParticleSystem();
+                this.spriteSheet = new SpriteSheet();
+                this.leaderboard = this.loadLeaderboard();
+                this.maxHealthUpgrades = 0;
 
                 this.keys = {};
                 this.init();
@@ -733,28 +1019,30 @@
             }
 
             spawnInitialEnemies() {
-                const enemyTypesList = Object.keys(ENEMY_TYPES);
-                for (let i = 0; i < 5; i++) {
-                    const type = i < 3 ? 'zombie' : (i < 4 ? 'knight' : 'wraith');
+                const spawnCount = 3 + this.level;
+                for (let i = 0; i < spawnCount; i++) {
+                    const types = ['zombie', 'zombie', 'knight', 'wraith', 'golem', 'assassin', 'plagueWarden'];
+                    const type = types[Math.floor(Math.random() * types.length)];
                     let x, y;
                     do {
                         x = Math.random() * (GRID_WIDTH - 4) * TILE_SIZE + 2 * TILE_SIZE;
                         y = Math.random() * (GRID_HEIGHT - 4) * TILE_SIZE + 2 * TILE_SIZE;
                     } while (!this.tilemap.isWalkable(x, y) ||
                              Math.hypot(x - this.player.x, y - this.player.y) < 100);
-                    this.enemies.push(new Enemy(x, y, type));
+                    this.enemies.push(new Enemy(x, y, type, this.level));
                 }
             }
 
             spawnEnemy() {
-                const type = Math.random() < 0.6 ? 'zombie' : (Math.random() < 0.7 ? 'knight' : 'wraith');
+                const types = ['zombie', 'zombie', 'knight', 'wraith', 'golem', 'assassin', 'plagueWarden'];
+                const type = types[Math.floor(Math.random() * types.length)];
                 let x, y;
                 do {
                     x = Math.random() * (GRID_WIDTH - 4) * TILE_SIZE + 2 * TILE_SIZE;
                     y = Math.random() * (GRID_HEIGHT - 4) * TILE_SIZE + 2 * TILE_SIZE;
                 } while (!this.tilemap.isWalkable(x, y) ||
                          Math.hypot(x - this.player.x, y - this.player.y) < 80);
-                this.enemies.push(new Enemy(x, y, type));
+                this.enemies.push(new Enemy(x, y, type, this.level));
             }
 
             handleInput() {
@@ -772,11 +1060,75 @@
                 }
             }
 
+            triggerAbility(abilityType) {
+                switch(abilityType) {
+                    case 'dash':
+                        if (this.player.dashCooldown <= 0) {
+                            const dashDist = 40;
+                            let dashX = this.player.x;
+                            let dashY = this.player.y;
+
+                            switch(this.player.lastDirection) {
+                                case 'up': dashY -= dashDist; break;
+                                case 'down': dashY += dashDist; break;
+                                case 'left': dashX -= dashDist; break;
+                                case 'right': dashX += dashDist; break;
+                            }
+
+                            // Check if destination is valid
+                            if (this.tilemap.isWalkable(dashX + 6, dashY + 6)) {
+                                this.player.x = dashX;
+                                this.player.y = dashY;
+                                this.particleSystem.spawn(this.player.x, this.player.y, 8, '#00ff88', 2, 50);
+                            }
+                            this.player.dashCooldown = 3;
+                        }
+                        break;
+
+                    case 'cleave':
+                        if (this.player.cleaveCooldown <= 0) {
+                            const cleaveRadius = 100;
+                            for (let enemy of this.enemies) {
+                                const dx = enemy.x - this.player.x;
+                                const dy = enemy.y - this.player.y;
+                                const dist = Math.sqrt(dx * dx + dy * dy);
+                                if (dist < cleaveRadius) {
+                                    const damage = this.player.getDamage() * 1.5;
+                                    enemy.takeDamage(damage);
+                                    enemy.applyKnockback(this.player.x, this.player.y, 30);
+                                    this.particleSystem.spawn(enemy.x, enemy.y, 6, '#ff6600', 2, 60);
+                                }
+                            }
+                            this.screenShake = 0.2;
+                            this.particleSystem.spawn(this.player.x, this.player.y, 12, '#ff3300', 3, 80);
+                            this.player.cleaveCooldown = 5;
+                        }
+                        break;
+
+                    case 'heal':
+                        if (this.player.healCooldown <= 0 && this.player.hp < this.player.maxHp) {
+                            const healAmount = 30;
+                            this.player.hp = Math.min(this.player.hp + healAmount, this.player.maxHp);
+                            this.particleSystem.spawn(this.player.x, this.player.y, 10, '#00ff88', 2, 40);
+                            this.player.healCooldown = 15;
+                        }
+                        break;
+                }
+            }
+
             update(deltaTime) {
                 if (this.gameOver || this.gameWon) return;
 
                 this.handleInput();
                 this.player.updateBuffs(deltaTime);
+                this.player.updateKnockback(this.tilemap);
+                this.particleSystem.update(deltaTime);
+
+                // Update cooldowns
+                if (this.player.dashCooldown > 0) this.player.dashCooldown -= deltaTime;
+                if (this.player.cleaveCooldown > 0) this.player.cleaveCooldown -= deltaTime;
+                if (this.player.healCooldown > 0) this.player.healCooldown -= deltaTime;
+                if (this.screenShake > 0) this.screenShake -= deltaTime;
 
                 // Update enemies
                 for (let enemy of this.enemies) {
@@ -785,8 +1137,11 @@
                     // Check collision with player
                     if (this.checkCollision(this.player, enemy)) {
                         if (enemy.attackCooldown <= 0) {
-                            this.player.takeDamage(enemy.damage);
+                            const baseDamage = enemy.damage;
+                            this.player.takeDamage(baseDamage);
+                            enemy.applyKnockback(this.player.x, this.player.y, 15);
                             enemy.attackCooldown = 1 / enemy.attackSpeed;
+                            this.particleSystem.spawn(this.player.x, this.player.y, 4, '#ff3333', 2, 30);
                         }
                     }
                 }
@@ -798,6 +1153,7 @@
                     if (this.checkCollision(this.player, substance)) {
                         this.player.inventory[substance.type]++;
                         this.substances.splice(this.substances.indexOf(substance), 1);
+                        this.particleSystem.spawn(substance.x, substance.y, 6, SUBSTANCES[substance.type].color, 1.5, 40);
                     }
                 }
 
@@ -807,16 +1163,28 @@
                         if (this.player.attackCooldown <= 0) {
                             const damage = this.player.getDamage() * (0.8 + Math.random() * 0.4);
                             enemy.takeDamage(damage);
+                            enemy.applyKnockback(this.player.x, this.player.y, 20);
                             this.player.attackCooldown = 0.5;
+                            this.particleSystem.spawn(enemy.x, enemy.y, 5, '#ffaa00', 2, 50);
 
                             if (enemy.hp <= 0) {
+                                // Enemy death
+                                this.particleSystem.spawn(enemy.x, enemy.y, 12, enemy.color, 2.5, 100);
+
                                 // Drop loot
                                 const lootType = enemy.loot[Math.floor(Math.random() * enemy.loot.length)];
                                 this.substances.push(new Substance(enemy.x, enemy.y, lootType));
                                 this.enemies.splice(this.enemies.indexOf(enemy), 1);
                                 this.killCount++;
+                                this.player.score += Math.floor(20 * (1 + (this.level - 1) * 0.5));
+                                this.screenShake = 0.1;
 
-                                // Spawn new enemy
+                                // Level up check (every 10 kills)
+                                if (this.killCount % 10 === 0 && this.killCount > 0) {
+                                    this.levelUp();
+                                }
+
+                                // Spawn new enemy if not at limit
                                 if (this.killCount < this.winCondition) {
                                     setTimeout(() => this.spawnEnemy(), 500);
                                 }
@@ -853,6 +1221,18 @@
                 }
             }
 
+            levelUp() {
+                this.level++;
+                this.killCount = 0;
+                this.player.maxHp += 10;
+                this.player.hp = this.player.maxHp;
+                this.maxHealthUpgrades++;
+                this.tilemap = new Tilemap(GRID_WIDTH, GRID_HEIGHT);
+                this.enemies = [];
+                this.spawnInitialEnemies();
+                this.particleSystem.spawn(this.player.x, this.player.y, 20, '#00ff88', 3, 120);
+            }
+
             checkCollision(obj1, obj2) {
                 return obj1.x < obj2.x + obj2.width &&
                        obj1.x + obj1.width > obj2.x &&
@@ -861,6 +1241,13 @@
             }
 
             render() {
+                // Apply screen shake
+                const shakeX = this.screenShake > 0 ? (Math.random() - 0.5) * 4 : 0;
+                const shakeY = this.screenShake > 0 ? (Math.random() - 0.5) * 4 : 0;
+
+                this.ctx.save();
+                this.ctx.translate(shakeX, shakeY);
+
                 this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
                 // Render tilemap
@@ -879,6 +1266,11 @@
                 // Render player
                 this.player.render(this.ctx);
 
+                // Render particles
+                this.particleSystem.render(this.ctx);
+
+                this.ctx.restore();
+
                 // Update UI
                 this.updateUI();
             }
@@ -889,24 +1281,26 @@
                 const timeDisplay = document.getElementById('timeDisplay');
                 const buffList = document.getElementById('buffList');
 
-                hpDisplay.textContent = `${Math.ceil(this.player.hp)}/100`;
+                hpDisplay.textContent = `${Math.ceil(this.player.hp)}/${Math.ceil(this.player.maxHp)}`;
                 killsDisplay.textContent = `${this.killCount}/${this.winCondition}`;
 
                 const minutes = Math.floor(this.elapsedTime / 60);
                 const seconds = Math.floor(this.elapsedTime % 60);
                 timeDisplay.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
 
-                // Update buff list
-                buffList.innerHTML = this.player.activeBuffs.length > 0
-                    ? '<div style="color: #8a2be2; font-size: 10px; margin-bottom: 2px;">ACTIVE BUFFS:</div>'
-                    : '';
+                // Add level and score info
+                let buffHTML = `<div style="color: #00ffff; font-size: 10px;">Level: ${this.level}</div>`;
+                buffHTML += `<div style="color: #ffaa00; font-size: 10px;">Score: ${this.player.score}</div>`;
 
-                for (let buff of this.player.activeBuffs) {
-                    const buffDiv = document.createElement('div');
-                    buffDiv.className = 'buff-item';
-                    buffDiv.textContent = `${buff.name} (${buff.duration.toFixed(1)}s)`;
-                    buffList.appendChild(buffDiv);
+                // Update buff list
+                if (this.player.activeBuffs.length > 0) {
+                    buffHTML += '<div style="color: #8a2be2; font-size: 10px; margin-top: 4px; margin-bottom: 2px;">BUFFS:</div>';
+                    for (let buff of this.player.activeBuffs) {
+                        buffHTML += `<div class="buff-item">${buff.name} (${buff.duration.toFixed(1)}s)</div>`;
+                    }
                 }
+
+                buffList.innerHTML = buffHTML;
 
                 // Update inventory counts
                 for (let type of Object.keys(SUBSTANCES)) {
@@ -915,26 +1309,121 @@
                         countEl.textContent = this.player.inventory[type];
                     }
                 }
+
+                // Update ability display
+                const dashEl = document.getElementById('ability-dash');
+                const cleaveEl = document.getElementById('ability-cleave');
+                const healEl = document.getElementById('ability-heal');
+
+                if (dashEl) {
+                    if (this.player.dashCooldown > 0) {
+                        dashEl.className = 'ability-item cooldown';
+                        dashEl.textContent = `SPACE: Dash (${this.player.dashCooldown.toFixed(1)}s)`;
+                    } else {
+                        dashEl.className = 'ability-item';
+                        dashEl.textContent = 'SPACE: Dash';
+                    }
+                }
+
+                if (cleaveEl) {
+                    if (this.player.cleaveCooldown > 0) {
+                        cleaveEl.className = 'ability-item cooldown';
+                        cleaveEl.textContent = `E: Cleave (${this.player.cleaveCooldown.toFixed(1)}s)`;
+                    } else {
+                        cleaveEl.className = 'ability-item';
+                        cleaveEl.textContent = 'E: Cleave';
+                    }
+                }
+
+                if (healEl) {
+                    if (this.player.healCooldown > 0) {
+                        healEl.className = 'ability-item cooldown';
+                        healEl.textContent = `H: Heal (${this.player.healCooldown.toFixed(1)}s)`;
+                    } else {
+                        healEl.className = 'ability-item';
+                        healEl.textContent = this.player.hp >= this.player.maxHp ? 'H: Full' : 'H: Heal';
+                    }
+                }
+            }
+
+            saveGame() {
+                const saveData = {
+                    level: this.level,
+                    killCount: this.killCount,
+                    score: this.player.score,
+                    hp: this.player.hp,
+                    maxHp: this.player.maxHp,
+                    inventory: this.player.inventory,
+                    timestamp: Date.now()
+                };
+                localStorage.setItem('darkFantasyGameSave', JSON.stringify(saveData));
+            }
+
+            loadGame() {
+                const saveData = localStorage.getItem('darkFantasyGameSave');
+                if (saveData) {
+                    try {
+                        return JSON.parse(saveData);
+                    } catch (e) {
+                        return null;
+                    }
+                }
+                return null;
+            }
+
+            saveLeaderboard() {
+                localStorage.setItem('darkFantasyLeaderboard', JSON.stringify(this.leaderboard));
+            }
+
+            loadLeaderboard() {
+                const data = localStorage.getItem('darkFantasyLeaderboard');
+                if (data) {
+                    try {
+                        return JSON.parse(data);
+                    } catch (e) {
+                        return [];
+                    }
+                }
+                return [];
+            }
+
+            addToLeaderboard(playerName, score) {
+                this.leaderboard.push({ name: playerName, score: score, date: new Date().toLocaleDateString() });
+                this.leaderboard.sort((a, b) => b.score - a.score);
+                this.leaderboard = this.leaderboard.slice(0, 10);
+                this.saveLeaderboard();
             }
 
             endGame(won) {
                 this.running = false;
                 this.gameWon = won;
+                this.saveGame();
 
                 const overlay = document.getElementById('gameOverlay');
                 const overlayText = document.getElementById('overlayText');
                 const overlaySubtext = document.getElementById('overlaySubtext');
 
+                let statsText = '';
                 if (won) {
                     overlayText.textContent = 'VICTORY!';
-                    overlaySubtext.textContent = `You survived! Kills: ${this.killCount} | Time: ${Math.floor(this.elapsedTime)}s`;
                     overlayText.style.color = '#00ff88';
+                    statsText = `
+                        Level: ${this.level} | Kills: ${this.player.score / 20} |
+                        Score: ${Math.floor(this.player.score)} | Time: ${Math.floor(this.elapsedTime)}s
+                    `;
                 } else {
                     overlayText.textContent = 'DEFEATED';
-                    overlaySubtext.textContent = `Final Stats: Kills: ${this.killCount} | Time: ${Math.floor(this.elapsedTime)}s`;
                     overlayText.style.color = '#ff3333';
+                    statsText = `
+                        Level: ${this.level} | Kills: ${this.killCount} |
+                        Score: ${Math.floor(this.player.score)} | Time: ${Math.floor(this.elapsedTime)}s | HP: ${Math.ceil(this.player.hp)}
+                    `;
+                    // Add to leaderboard
+                    const playerName = prompt('Enter your name for leaderboard:') || 'Anonymous';
+                    this.addToLeaderboard(playerName, Math.floor(this.player.score));
                 }
 
+                overlaySubtext.textContent = statsText;
                 overlay.classList.add('active');
             }
 
@@ -965,6 +1454,18 @@
 
                     if (substanceKeys[e.key]) {
                         this.player.consumeSubstance(substanceKeys[e.key]);
+                    }
+
+                    // Special abilities
+                    if (e.key === ' ') {
+                        e.preventDefault();
+                        this.triggerAbility('dash');
+                    }
+                    if (e.key === 'e' || e.key === 'E') {
+                        this.triggerAbility('cleave');
+                    }
+                    if (e.key === 'h' || e.key === 'H') {
+                        this.triggerAbility('heal');
                     }
                 });
 
