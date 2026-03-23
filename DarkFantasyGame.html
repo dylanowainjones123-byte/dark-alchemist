@@ -274,6 +274,11 @@
                 <div class="substance-count" id="count-line">0</div>
                 <div class="substance-name">LINE</div>
             </div>
+            <div class="substance-slot" onclick="game.player.consumeSubstance('weed')">
+                <div class="substance-icon" style="background: #228B22;">🍃</div>
+                <div class="substance-count" id="count-weed">0</div>
+                <div class="substance-name">WEED</div>
+            </div>
         </div>
 
         <div id="gameOverlay">
@@ -310,13 +315,14 @@
             cigarettes: { name: 'Cigarettes', damage: 1.0, speed: 1.15, hp: 0, defense: 1.0, duration: 40, color: '#cccccc', maxStack: 5 },
             shots: { name: 'Shots', damage: 1.0, speed: 1.0, hp: 10, defense: 1.0, duration: 25, color: '#ffccaa', maxStack: 5 },
             snus: { name: 'Snus', damage: 1.0, speed: 1.0, hp: 0, defense: 1.15, duration: 35, color: '#9932cc', maxStack: 5 },
-            line: { name: 'Ripping a Line', damage: 1.4, speed: 1.25, hp: 0, defense: 1.0, duration: 20, color: '#ffffff', maxStack: 2 }
+            line: { name: 'Ripping a Line', damage: 1.4, speed: 1.25, hp: 0, defense: 1.0, duration: 20, color: '#ffffff', maxStack: 2 },
+            weed: { name: 'Weed', damage: 1.0, speed: 1.3, hp: 0, defense: 1.0, duration: 45, color: '#228B22', maxStack: 4 }
         };
 
         const ENEMY_TYPES = {
-            zombie: { name: 'Corrupted Zombie', hp: 30, damage: 5, speed: 1, attackSpeed: 1, color: '#4a7c4e', loot: ['beer', 'shots'], spriteType: 'zombie' },
+            zombie: { name: 'Corrupted Zombie', hp: 30, damage: 5, speed: 1, attackSpeed: 1, color: '#4a7c4e', loot: ['beer', 'shots', 'weed'], spriteType: 'zombie' },
             knight: { name: 'Shadow Knight', hp: 25, damage: 8, speed: 1.5, attackSpeed: 1.2, color: '#2a2a4a', loot: ['snus', 'cigarettes'], spriteType: 'knight' },
-            wraith: { name: 'Void Wraith', hp: 15, damage: 10, speed: 2, attackSpeed: 1.5, color: '#5a3a7a', loot: ['line', 'shots'], spriteType: 'wraith' },
+            wraith: { name: 'Void Wraith', hp: 15, damage: 10, speed: 2, attackSpeed: 1.5, color: '#5a3a7a', loot: ['line', 'shots', 'weed'], spriteType: 'wraith' },
             golem: { name: 'Stone Golem', hp: 50, damage: 3, speed: 0.5, attackSpeed: 0.8, color: '#696969', loot: ['snus', 'beer'], spriteType: 'golem' },
             assassin: { name: 'Void Assassin', hp: 10, damage: 12, speed: 3, attackSpeed: 1.8, color: '#2a0a4a', loot: ['line'], spriteType: 'assassin' },
             plagueWarden: { name: 'Plague Warden', hp: 20, damage: 6, speed: 1.2, attackSpeed: 1.3, color: '#6b4423', loot: ['shots', 'cigarettes'], spriteType: 'plaguewarden', ranged: true }
@@ -410,12 +416,12 @@
                 this.sprites.player = this.generatePlayerSprite();
 
                 // Enemy sprites
-                this.sprites.zombie = this.generateEnemySprite('#4a7c4e');
-                this.sprites.knight = this.generateEnemySprite('#2a2a4a');
-                this.sprites.wraith = this.generateEnemySprite('#5a3a7a');
-                this.sprites.golem = this.generateEnemySprite('#696969');
-                this.sprites.assassin = this.generateEnemySprite('#2a0a4a');
-                this.sprites.plaguewarden = this.generateEnemySprite('#6b4423');
+                this.sprites.zombie = this.generateEnemySprite('#4a7c4e', '#4a7c4e');
+                this.sprites.knight = this.generateEnemySprite('#2a2a4a', '#2a2a4a');
+                this.sprites.wraith = this.generateEnemySprite('#5a3a7a', '#5a3a7a');
+                this.sprites.golem = this.generateEnemySprite('#696969', '#696969');
+                this.sprites.assassin = this.generateEnemySprite('#2a0a4a', '#2a0a4a');
+                this.sprites.plaguewarden = this.generateEnemySprite('#6b4423', '#6b4423');
 
                 // Substance sprites
                 this.sprites.substance = this.generateSubstanceSprite();
@@ -427,66 +433,418 @@
                 canvas.height = 16; // 4 frames of 16x16
                 const ctx = canvas.getContext('2d');
 
-                // Frame 0 - idle
-                ctx.fillStyle = '#00ff88';
-                ctx.fillRect(2, 2, 12, 12);
-                ctx.fillStyle = '#000000';
-                ctx.fillRect(4, 5, 2, 2);
-                ctx.fillRect(10, 5, 2, 2);
+                const frames = [
+                    // Frame 0 - standing idle
+                    () => {
+                        // Head
+                        ctx.fillStyle = '#00ff88';
+                        ctx.fillRect(6, 1, 4, 4);
+                        ctx.strokeStyle = '#00aa55';
+                        ctx.lineWidth = 1;
+                        ctx.strokeRect(6, 1, 4, 4);
+                        // Eyes
+                        ctx.fillStyle = '#000000';
+                        ctx.fillRect(7, 2, 1, 1);
+                        ctx.fillRect(9, 2, 1, 1);
+                        // Mouth
+                        ctx.fillRect(8, 4, 1, 1);
+                        // Body
+                        ctx.fillStyle = '#00ff88';
+                        ctx.fillRect(6, 5, 4, 4);
+                        ctx.strokeStyle = '#00aa55';
+                        ctx.strokeRect(6, 5, 4, 4);
+                        // Arms
+                        ctx.fillStyle = '#00ff88';
+                        ctx.fillRect(4, 6, 2, 3);
+                        ctx.fillRect(10, 6, 2, 3);
+                        ctx.strokeStyle = '#00aa55';
+                        ctx.strokeRect(4, 6, 2, 3);
+                        ctx.strokeRect(10, 6, 2, 3);
+                        // Legs
+                        ctx.fillStyle = '#00ff88';
+                        ctx.fillRect(6, 9, 2, 3);
+                        ctx.fillRect(8, 9, 2, 3);
+                        ctx.strokeStyle = '#00aa55';
+                        ctx.strokeRect(6, 9, 2, 3);
+                        ctx.strokeRect(8, 9, 2, 3);
+                        // Feet
+                        ctx.fillRect(5, 12, 1, 1);
+                        ctx.fillRect(10, 12, 1, 1);
+                    },
+                    // Frame 1 - walk step 1
+                    () => {
+                        const xOff = 16;
+                        // Head
+                        ctx.fillStyle = '#00ff88';
+                        ctx.fillRect(6 + xOff, 1, 4, 4);
+                        ctx.strokeStyle = '#00aa55';
+                        ctx.lineWidth = 1;
+                        ctx.strokeRect(6 + xOff, 1, 4, 4);
+                        // Eyes
+                        ctx.fillStyle = '#000000';
+                        ctx.fillRect(7 + xOff, 2, 1, 1);
+                        ctx.fillRect(9 + xOff, 2, 1, 1);
+                        // Body
+                        ctx.fillStyle = '#00ff88';
+                        ctx.fillRect(6 + xOff, 5, 4, 4);
+                        ctx.strokeStyle = '#00aa55';
+                        ctx.strokeRect(6 + xOff, 5, 4, 4);
+                        // Arms (left forward)
+                        ctx.fillStyle = '#00ff88';
+                        ctx.fillRect(4 + xOff, 5, 2, 4);
+                        ctx.fillRect(10 + xOff, 6, 2, 3);
+                        ctx.strokeStyle = '#00aa55';
+                        ctx.strokeRect(4 + xOff, 5, 2, 4);
+                        ctx.strokeRect(10 + xOff, 6, 2, 3);
+                        // Legs (opposite movement)
+                        ctx.fillStyle = '#00ff88';
+                        ctx.fillRect(6 + xOff, 9, 2, 3);
+                        ctx.fillRect(8 + xOff, 10, 2, 2);
+                        ctx.strokeStyle = '#00aa55';
+                        ctx.strokeRect(6 + xOff, 9, 2, 3);
+                        ctx.strokeRect(8 + xOff, 10, 2, 2);
+                    },
+                    // Frame 2 - walk step 2
+                    () => {
+                        const xOff = 32;
+                        // Head
+                        ctx.fillStyle = '#00ff88';
+                        ctx.fillRect(6 + xOff, 1, 4, 4);
+                        ctx.strokeStyle = '#00aa55';
+                        ctx.lineWidth = 1;
+                        ctx.strokeRect(6 + xOff, 1, 4, 4);
+                        // Eyes
+                        ctx.fillStyle = '#000000';
+                        ctx.fillRect(7 + xOff, 2, 1, 1);
+                        ctx.fillRect(9 + xOff, 2, 1, 1);
+                        // Body
+                        ctx.fillStyle = '#00ff88';
+                        ctx.fillRect(6 + xOff, 5, 4, 4);
+                        ctx.strokeStyle = '#00aa55';
+                        ctx.strokeRect(6 + xOff, 5, 4, 4);
+                        // Arms
+                        ctx.fillStyle = '#00ff88';
+                        ctx.fillRect(4 + xOff, 6, 2, 3);
+                        ctx.fillRect(10 + xOff, 5, 2, 4);
+                        ctx.strokeStyle = '#00aa55';
+                        ctx.strokeRect(4 + xOff, 6, 2, 3);
+                        ctx.strokeRect(10 + xOff, 5, 2, 4);
+                        // Legs (opposite to frame 1)
+                        ctx.fillStyle = '#00ff88';
+                        ctx.fillRect(6 + xOff, 10, 2, 2);
+                        ctx.fillRect(8 + xOff, 9, 2, 3);
+                        ctx.strokeStyle = '#00aa55';
+                        ctx.strokeRect(6 + xOff, 10, 2, 2);
+                        ctx.strokeRect(8 + xOff, 9, 2, 3);
+                    },
+                    // Frame 3 - walk return to idle
+                    () => {
+                        const xOff = 48;
+                        // Head
+                        ctx.fillStyle = '#00ff88';
+                        ctx.fillRect(6 + xOff, 1, 4, 4);
+                        ctx.strokeStyle = '#00aa55';
+                        ctx.lineWidth = 1;
+                        ctx.strokeRect(6 + xOff, 1, 4, 4);
+                        // Eyes
+                        ctx.fillStyle = '#000000';
+                        ctx.fillRect(7 + xOff, 2, 1, 1);
+                        ctx.fillRect(9 + xOff, 2, 1, 1);
+                        // Body
+                        ctx.fillStyle = '#00ff88';
+                        ctx.fillRect(6 + xOff, 5, 4, 4);
+                        ctx.strokeStyle = '#00aa55';
+                        ctx.strokeRect(6 + xOff, 5, 4, 4);
+                        // Arms
+                        ctx.fillStyle = '#00ff88';
+                        ctx.fillRect(4 + xOff, 6, 2, 3);
+                        ctx.fillRect(10 + xOff, 6, 2, 3);
+                        ctx.strokeStyle = '#00aa55';
+                        ctx.strokeRect(4 + xOff, 6, 2, 3);
+                        ctx.strokeRect(10 + xOff, 6, 2, 3);
+                        // Legs
+                        ctx.fillStyle = '#00ff88';
+                        ctx.fillRect(6 + xOff, 9, 2, 3);
+                        ctx.fillRect(8 + xOff, 9, 2, 3);
+                        ctx.strokeStyle = '#00aa55';
+                        ctx.strokeRect(6 + xOff, 9, 2, 3);
+                        ctx.strokeRect(8 + xOff, 9, 2, 3);
+                    }
+                ];
 
-                // Frames 1-3 - walk animation
-                for (let f = 1; f < 4; f++) {
-                    const xOffset = f * 16 + 2;
-                    ctx.fillStyle = '#00ff88';
-                    ctx.fillRect(xOffset, 2 + f * 0.5, 12, 12);
+                frames.forEach(frame => frame());
+                return canvas;
+            }
+
+            generateEnemySprite(color, type) {
+                const canvas = document.createElement('canvas');
+                canvas.width = 48;
+                canvas.height = 16; // 3 frames
+                const ctx = canvas.getContext('2d');
+                const outline = this.darkenColor(color);
+
+                if (type === '#4a7c4e') { // Zombie
+                    // Frame 0
+                    ctx.fillStyle = color;
+                    ctx.fillRect(1, 5, 4, 8); // Head hunched
+                    ctx.fillRect(2, 6, 2, 2); // Eyes
+                    ctx.fillStyle = outline;
+                    ctx.strokeRect(1, 5, 4, 8);
+                    ctx.fillStyle = '#8b4513';
+                    ctx.fillRect(1, 10, 5, 3); // Tattered clothing
+                    // Frame 1
+                    ctx.fillStyle = color;
+                    ctx.fillRect(17, 4, 5, 10);
                     ctx.fillStyle = '#000000';
-                    ctx.fillRect(xOffset + 2, 5, 2, 2);
-                    ctx.fillRect(xOffset + 8, 5, 2, 2);
+                    ctx.fillRect(18, 6, 2, 2);
+                    ctx.fillStyle = outline;
+                    ctx.strokeRect(17, 4, 5, 10);
+                    ctx.fillStyle = '#8b4513';
+                    ctx.fillRect(16, 12, 6, 2);
+                    // Frame 2
+                    ctx.fillStyle = color;
+                    ctx.fillRect(33, 5, 4, 8);
+                    ctx.fillStyle = '#ff6600';
+                    ctx.fillRect(34, 6, 2, 2);
+                    ctx.fillStyle = outline;
+                    ctx.strokeRect(33, 5, 4, 8);
+                } else if (type === '#5a3a7a') { // Wraith
+                    // Frame 0 - ghostly
+                    ctx.fillStyle = color;
+                    ctx.fillRect(2, 2, 10, 10);
+                    ctx.globalAlpha = 0.7;
+                    ctx.fillRect(3, 3, 8, 8);
+                    ctx.globalAlpha = 1;
+                    ctx.fillStyle = '#7a5aaa';
+                    ctx.fillRect(3, 6, 8, 2); // Wispy effect
+                    ctx.fillStyle = outline;
+                    ctx.strokeRect(2, 2, 10, 10);
+                    // Frame 1 - floating pose
+                    ctx.fillStyle = color;
+                    ctx.fillRect(18, 3, 10, 8);
+                    ctx.globalAlpha = 0.7;
+                    ctx.fillRect(19, 4, 8, 6);
+                    ctx.globalAlpha = 1;
+                    ctx.fillStyle = '#7a5aaa';
+                    ctx.fillRect(19, 8, 8, 1);
+                    ctx.fillStyle = outline;
+                    ctx.strokeRect(18, 3, 10, 8);
+                    // Frame 2
+                    ctx.fillStyle = color;
+                    ctx.fillRect(34, 2, 10, 10);
+                    ctx.globalAlpha = 0.7;
+                    ctx.fillRect(35, 3, 8, 8);
+                    ctx.globalAlpha = 1;
+                    ctx.fillStyle = '#ff6600';
+                    ctx.fillRect(35, 6, 8, 2);
+                    ctx.fillStyle = outline;
+                    ctx.strokeRect(34, 2, 10, 10);
+                } else if (type === '#696969') { // Golem
+                    // Frame 0 - blocky
+                    ctx.fillStyle = color;
+                    ctx.fillRect(1, 2, 5, 6); // Head
+                    ctx.fillRect(2, 8, 8, 5); // Body
+                    ctx.fillRect(1, 10, 2, 3); // Left arm
+                    ctx.fillRect(11, 10, 2, 3); // Right arm
+                    ctx.fillStyle = outline;
+                    ctx.strokeRect(1, 2, 5, 6);
+                    ctx.strokeRect(2, 8, 8, 5);
+                    // Frame 1 - arm up
+                    ctx.fillStyle = color;
+                    ctx.fillRect(17, 2, 5, 6);
+                    ctx.fillRect(18, 8, 8, 5);
+                    ctx.fillRect(17, 7, 2, 5); // Left arm raised
+                    ctx.fillRect(27, 10, 2, 3);
+                    ctx.fillStyle = outline;
+                    ctx.strokeRect(17, 2, 5, 6);
+                    ctx.strokeRect(18, 8, 8, 5);
+                    // Frame 2
+                    ctx.fillStyle = color;
+                    ctx.fillRect(33, 2, 5, 6);
+                    ctx.fillRect(34, 8, 8, 5);
+                    ctx.fillStyle = outline;
+                    ctx.strokeRect(33, 2, 5, 6);
+                    ctx.strokeRect(34, 8, 8, 5);
+                } else if (type === '#2a0a4a') { // Assassin
+                    // Frame 0 - crouched
+                    ctx.fillStyle = color;
+                    ctx.fillRect(3, 6, 3, 4); // Head
+                    ctx.fillRect(2, 9, 6, 3); // Body crouched
+                    ctx.fillStyle = '#1a0a2a';
+                    ctx.fillRect(7, 9, 3, 2); // Dagger
+                    ctx.fillStyle = outline;
+                    ctx.strokeRect(3, 6, 3, 4);
+                    ctx.strokeRect(2, 9, 6, 3);
+                    // Frame 1 - striking
+                    ctx.fillStyle = color;
+                    ctx.fillRect(19, 5, 3, 4);
+                    ctx.fillRect(18, 8, 6, 4);
+                    ctx.fillStyle = '#1a0a2a';
+                    ctx.fillRect(23, 7, 4, 2); // Dagger extended
+                    ctx.fillStyle = outline;
+                    ctx.strokeRect(19, 5, 3, 4);
+                    ctx.strokeRect(18, 8, 6, 4);
+                    // Frame 2
+                    ctx.fillStyle = color;
+                    ctx.fillRect(35, 6, 3, 4);
+                    ctx.fillRect(34, 9, 6, 3);
+                    ctx.fillStyle = '#ff6600';
+                    ctx.fillRect(39, 9, 2, 2);
+                    ctx.fillStyle = outline;
+                    ctx.strokeRect(35, 6, 3, 4);
+                } else if (type === '#6b4423') { // Plague Warden
+                    // Frame 0 - staff
+                    ctx.fillStyle = color;
+                    ctx.fillRect(3, 2, 4, 8); // Head hooded
+                    ctx.fillRect(2, 9, 6, 4); // Robes
+                    ctx.fillStyle = '#4a3210';
+                    ctx.fillRect(9, 1, 2, 10); // Staff
+                    ctx.fillStyle = '#ffaa00';
+                    ctx.fillRect(8, 0, 4, 3); // Magic orb
+                    ctx.fillStyle = outline;
+                    ctx.strokeRect(3, 2, 4, 8);
+                    // Frame 1
+                    ctx.fillStyle = color;
+                    ctx.fillRect(19, 3, 4, 7);
+                    ctx.fillRect(18, 9, 6, 4);
+                    ctx.fillStyle = '#4a3210';
+                    ctx.fillRect(25, 2, 2, 11);
+                    ctx.fillStyle = '#ffaa00';
+                    ctx.fillRect(24, 1, 4, 3);
+                    ctx.fillStyle = outline;
+                    ctx.strokeRect(19, 3, 4, 7);
+                    // Frame 2
+                    ctx.fillStyle = color;
+                    ctx.fillRect(35, 2, 4, 8);
+                    ctx.fillRect(34, 9, 6, 4);
+                    ctx.fillStyle = '#ff6600';
+                    ctx.fillRect(40, 3, 2, 8);
+                    ctx.fillStyle = outline;
+                    ctx.strokeRect(35, 2, 4, 8);
+                } else { // Knight (default)
+                    // Frame 0 - armor
+                    ctx.fillStyle = color;
+                    ctx.fillRect(2, 2, 4, 4); // Helmet
+                    ctx.fillRect(1, 6, 6, 7); // Armor
+                    ctx.fillStyle = '#ffaa00';
+                    ctx.fillRect(3, 7, 2, 3); // Shield
+                    ctx.fillStyle = outline;
+                    ctx.strokeRect(2, 2, 4, 4);
+                    ctx.strokeRect(1, 6, 6, 7);
+                    // Frame 1 - combat
+                    ctx.fillStyle = color;
+                    ctx.fillRect(18, 2, 4, 4);
+                    ctx.fillRect(17, 6, 6, 7);
+                    ctx.fillStyle = '#cccccc';
+                    ctx.fillRect(23, 5, 3, 6); // Sword
+                    ctx.fillStyle = outline;
+                    ctx.strokeRect(18, 2, 4, 4);
+                    ctx.strokeRect(17, 6, 6, 7);
+                    // Frame 2
+                    ctx.fillStyle = color;
+                    ctx.fillRect(34, 2, 4, 4);
+                    ctx.fillRect(33, 6, 6, 7);
+                    ctx.fillStyle = '#ff6600';
+                    ctx.fillRect(35, 7, 2, 3);
+                    ctx.fillStyle = outline;
+                    ctx.strokeRect(34, 2, 4, 4);
+                    ctx.strokeRect(33, 6, 6, 7);
                 }
 
                 return canvas;
             }
 
-            generateEnemySprite(color) {
-                const canvas = document.createElement('canvas');
-                canvas.width = 48;
-                canvas.height = 16; // 3 frames
-                const ctx = canvas.getContext('2d');
-
-                // Frame 0 - idle
-                ctx.fillStyle = color;
-                ctx.fillRect(2, 3, 12, 10);
-                ctx.fillStyle = '#000000';
-                ctx.fillRect(4, 5, 2, 2);
-                ctx.fillRect(10, 5, 2, 2);
-
-                // Frame 1 - attack
-                ctx.fillStyle = color;
-                ctx.fillRect(18, 2, 12, 12);
-                ctx.fillStyle = '#000000';
-                ctx.fillRect(20, 4, 2, 2);
-                ctx.fillRect(26, 4, 2, 2);
-
-                // Frame 2 - hit
-                ctx.fillStyle = color;
-                ctx.fillRect(34, 3, 12, 10);
-                ctx.fillStyle = '#ff6600';
-                ctx.fillRect(36, 5, 2, 2);
-                ctx.fillRect(42, 5, 2, 2);
-
-                return canvas;
+            darkenColor(color) {
+                const num = parseInt(color.slice(1), 16);
+                const amt = Math.round(2.55 * -30);
+                const R = Math.max(0, (num >> 16) + amt);
+                const G = Math.max(0, (num >> 8 & 0x00FF) + amt);
+                const B = Math.max(0, (num & 0x0000FF) + amt);
+                return '#' + (0x1000000 + R * 0x10000 + G * 0x100 + B).toString(16).slice(1);
             }
 
             generateSubstanceSprite() {
                 const canvas = document.createElement('canvas');
-                canvas.width = 8;
-                canvas.height = 8;
+                canvas.width = 72; // 6 substances * 12px each
+                canvas.height = 12;
                 const ctx = canvas.getContext('2d');
-                ctx.fillStyle = '#ffff88';
-                ctx.fillRect(1, 1, 6, 6);
-                ctx.strokeStyle = '#ffff00';
+
+                // Beer mug (offset 0)
+                ctx.fillStyle = '#8b4513';
+                ctx.fillRect(1, 4, 4, 6); // Mug body
+                ctx.fillRect(5, 5, 1, 4); // Handle
+                ctx.fillStyle = '#ffdd88';
+                ctx.fillRect(1, 3, 4, 2); // Foam head
+                ctx.strokeStyle = '#654321';
                 ctx.lineWidth = 1;
-                ctx.strokeRect(1, 1, 6, 6);
+                ctx.strokeRect(1, 4, 4, 6);
+
+                // Cigarettes (offset 12)
+                ctx.fillStyle = '#cccccc';
+                ctx.fillRect(13, 5, 1, 5); // Cigarette stick
+                ctx.fillStyle = '#ff6644';
+                ctx.fillRect(13, 4, 1, 1); // Fire
+                ctx.fillStyle = '#999999';
+                ctx.fillRect(14, 5, 1, 3); // Ash
+                ctx.fillStyle = '#999999';
+                for (let i = 0; i < 3; i++) {
+                    ctx.fillRect(15, 5 + i * 2, 1, 1); // Smoke wisps
+                }
+
+                // Shots glass (offset 24)
+                ctx.fillStyle = '#ffccaa';
+                ctx.beginPath();
+                ctx.moveTo(26, 4);
+                ctx.lineTo(26, 9);
+                ctx.lineTo(30, 9);
+                ctx.lineTo(30, 4);
+                ctx.fill();
+                ctx.fillStyle = '#ff9944';
+                ctx.fillRect(26, 7, 4, 2); // Liquid
+                ctx.strokeStyle = '#cc8844';
+                ctx.lineWidth = 1;
+                ctx.strokeRect(26, 4, 4, 5);
+
+                // Snus pouch (offset 36)
+                ctx.fillStyle = '#9932cc';
+                ctx.fillRect(38, 5, 3, 4); // Pouch
+                ctx.fillStyle = '#ccaaee';
+                ctx.fillRect(39, 5, 1, 4); // Label stripe
+                ctx.strokeStyle = '#6b1fa3';
+                ctx.lineWidth = 1;
+                ctx.strokeRect(38, 5, 3, 4);
+
+                // Powder line (offset 48)
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(50, 8, 4, 1); // Powder line
+                ctx.fillStyle = '#f0f0f0';
+                ctx.fillRect(50, 7, 4, 1); // Shimmer
+                ctx.fillStyle = '#e8e8e8';
+                ctx.fillRect(51, 8, 1, 2); // Shadow
+
+                // Weed leaf (offset 60)
+                ctx.fillStyle = '#228B22';
+                // Draw cannabis leaf shape
+                ctx.beginPath();
+                ctx.moveTo(66, 3); // Top point
+                ctx.lineTo(68, 6); // Right side
+                ctx.lineTo(66, 7); // Right bottom
+                ctx.lineTo(65, 6); // Center
+                ctx.lineTo(64, 7); // Left bottom
+                ctx.lineTo(62, 6); // Left side
+                ctx.closePath();
+                ctx.fill();
+                ctx.strokeStyle = '#1a6b1a';
+                ctx.lineWidth = 1;
+                ctx.stroke();
+                // Leaf details
+                ctx.strokeStyle = '#1a6b1a';
+                ctx.lineWidth = 0.5;
+                ctx.beginPath();
+                ctx.moveTo(65, 3);
+                ctx.lineTo(65, 7);
+                ctx.stroke();
+
                 return canvas;
             }
 
@@ -576,7 +934,8 @@
                     cigarettes: 3,
                     shots: 3,
                     snus: 3,
-                    line: 1
+                    line: 1,
+                    weed: 2
                 };
                 this.attackCooldown = 0;
                 this.lastDirection = 'down';
@@ -617,6 +976,12 @@
                     this.y = newY;
                 }
 
+                // Clamp to map bounds
+                const maxX = GRID_WIDTH * TILE_SIZE - this.width;
+                const maxY = GRID_HEIGHT * TILE_SIZE - this.height;
+                this.x = Math.max(0, Math.min(this.x, maxX));
+                this.y = Math.max(0, Math.min(this.y, maxY));
+
                 this.animationFrame = (this.animationFrame + 1) % 8;
             }
 
@@ -644,6 +1009,12 @@
                         this.x = newX;
                         this.y = newY;
                     }
+
+                    // Clamp to map bounds
+                    const maxX = GRID_WIDTH * TILE_SIZE - this.width;
+                    const maxY = GRID_HEIGHT * TILE_SIZE - this.height;
+                    this.x = Math.max(0, Math.min(this.x, maxX));
+                    this.y = Math.max(0, Math.min(this.y, maxY));
 
                     this.knockbackVx *= 0.92;
                     this.knockbackVy *= 0.92;
@@ -831,6 +1202,12 @@
                         this.y = newY;
                     }
 
+                    // Clamp to map bounds
+                    const maxX = GRID_WIDTH * TILE_SIZE - this.width;
+                    const maxY = GRID_HEIGHT * TILE_SIZE - this.height;
+                    this.x = Math.max(0, Math.min(this.x, maxX));
+                    this.y = Math.max(0, Math.min(this.y, maxY));
+
                     this.knockbackVx *= 0.92;
                     this.knockbackVy *= 0.92;
                 }
@@ -879,6 +1256,12 @@
                     this.x = newX;
                     this.y = newY;
                 }
+
+                // Clamp to map bounds
+                const maxX = GRID_WIDTH * TILE_SIZE - this.width;
+                const maxY = GRID_HEIGHT * TILE_SIZE - this.height;
+                this.x = Math.max(0, Math.min(this.x, maxX));
+                this.y = Math.max(0, Math.min(this.y, maxY));
 
                 // Attack cooldown
                 if (this.attackCooldown > 0) {
@@ -1075,8 +1458,11 @@
                                 case 'right': dashX += dashDist; break;
                             }
 
-                            // Check if destination is valid
-                            if (this.tilemap.isWalkable(dashX + 6, dashY + 6)) {
+                            // Validate destination is in bounds BEFORE teleporting
+                            const maxX = GRID_WIDTH * TILE_SIZE - 12;
+                            const maxY = GRID_HEIGHT * TILE_SIZE - 12;
+                            if (dashX >= 0 && dashX <= maxX && dashY >= 0 && dashY <= maxY &&
+                                this.tilemap.isWalkable(dashX + 6, dashY + 6)) {
                                 this.player.x = dashX;
                                 this.player.y = dashY;
                                 this.particleSystem.spawn(this.player.x, this.player.y, 8, '#00ff88', 2, 50);
@@ -1449,7 +1835,8 @@
                         '2': 'cigarettes',
                         '3': 'shots',
                         '4': 'snus',
-                        '5': 'line'
+                        '5': 'line',
+                        '6': 'weed'
                     };
 
                     if (substanceKeys[e.key]) {
