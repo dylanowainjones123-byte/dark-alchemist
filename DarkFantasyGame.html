@@ -2,7 +2,10 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="mobile-web-app-capable" content="yes">
     <title>Dark Alchemist - Substance Dungeon Crawler</title>
     <style>
         * {
@@ -19,6 +22,13 @@
             background: linear-gradient(135deg, #0a0e27 0%, #1a1a3e 100%);
             font-family: 'Courier New', monospace;
             color: #e0e0ff;
+            -webkit-user-select: none;
+            -webkit-touch-callout: none;
+            user-select: none;
+            overflow: hidden;
+            position: fixed;
+            width: 100%;
+            height: 100%;
         }
 
         #gameContainer {
@@ -28,6 +38,9 @@
             border: 4px solid #4a0080;
             box-shadow: 0 0 30px rgba(138, 43, 226, 0.5), inset 0 0 20px rgba(138, 43, 226, 0.2);
             background: #0a0a15;
+            -webkit-user-select: none;
+            -webkit-touch-callout: none;
+            touch-action: manipulation;
         }
 
         canvas {
@@ -36,6 +49,9 @@
             height: 100%;
             image-rendering: pixelated;
             image-rendering: crisp-edges;
+            -webkit-user-select: none;
+            -webkit-touch-callout: none;
+            max-width: 100%;
         }
 
         #menuContainer {
@@ -286,30 +302,104 @@
             gap: 4px;
         }
 
+        .dpad-btn {
+            width: 60px;
+            height: 60px;
+            font-size: 24px;
+            background: rgba(138, 43, 226, 0.7);
+            border: 2px solid #8a2be2;
+            color: #00ff88;
+            cursor: pointer;
+            border-radius: 4px;
+            font-weight: bold;
+            transition: all 0.1s;
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-touch-callout: none;
+        }
+
+        .dpad-btn:active {
+            background: #8a2be2;
+            box-shadow: 0 0 15px #8a2be2;
+            transform: scale(0.95);
+        }
+
+        .dpad-btn:hover {
+            background: rgba(138, 43, 226, 0.9);
+        }
+
+        @media (max-width: 1024px) {
+            #gameContainer {
+                width: calc(100vw - 20px);
+                height: calc(100vw - 20px);
+                max-width: 100vh;
+                max-height: 100vh;
+            }
+
+            #hudContainer {
+                font-size: 10px;
+            }
+
+            .substance-slot {
+                min-width: 40px;
+            }
+
+            .substance-icon {
+                width: 20px;
+                height: 20px;
+                font-size: 8px;
+            }
+        }
+
         @media (max-width: 768px) {
             #mobileControls {
                 display: grid;
-                grid-template-columns: repeat(3, 40px);
-                grid-template-rows: repeat(3, 40px);
-            }
-
-            .dpad-btn {
-                background: rgba(138, 43, 226, 0.5);
-                border: 1px solid #8a2be2;
-                color: #00ff88;
-                cursor: pointer;
-                border-radius: 2px;
-                font-weight: bold;
-            }
-
-            .dpad-btn:active {
-                background: #8a2be2;
+                grid-template-columns: repeat(3, 60px);
+                grid-template-rows: repeat(3, 60px);
             }
 
             #arrowUp { grid-column: 2; grid-row: 1; }
             #arrowLeft { grid-column: 1; grid-row: 2; }
             #arrowDown { grid-column: 2; grid-row: 3; }
             #arrowRight { grid-column: 3; grid-row: 2; }
+        }
+
+        @media (max-width: 600px) {
+            #gameContainer {
+                width: 100vw;
+                height: 100vw;
+                border: 2px solid #4a0080;
+            }
+
+            #hudContainer {
+                font-size: 9px;
+                padding: 4px;
+            }
+
+            #inventoryContainer {
+                gap: 4px;
+            }
+
+            .substance-slot {
+                min-width: 36px;
+                padding: 2px;
+            }
+
+            .dpad-btn {
+                width: 50px;
+                height: 50px;
+                font-size: 20px;
+            }
+
+            #mobileControls {
+                grid-template-columns: repeat(3, 50px);
+                grid-template-rows: repeat(3, 50px);
+            }
+
+            canvas {
+                display: block;
+                max-width: 100%;
+            }
         }
     </style>
 </head>
@@ -1185,11 +1275,10 @@
                     this.y = newY;
                 }
 
-                // Clamp to map bounds
-                const maxX = GRID_WIDTH * TILE_SIZE - this.width;
-                const maxY = GRID_HEIGHT * TILE_SIZE - this.height;
-                this.x = Math.max(0, Math.min(this.x, maxX));
-                this.y = Math.max(0, Math.min(this.y, maxY));
+                // Hard clamp to map bounds with padding
+                const padding = 8;
+                this.x = Math.max(padding, Math.min(this.x, GRID_WIDTH * TILE_SIZE - this.width - padding));
+                this.y = Math.max(padding, Math.min(this.y, GRID_HEIGHT * TILE_SIZE - this.height - padding));
 
                 this.animationFrame = (this.animationFrame + 1) % 8;
             }
@@ -1219,11 +1308,10 @@
                         this.y = newY;
                     }
 
-                    // Clamp to map bounds
-                    const maxX = GRID_WIDTH * TILE_SIZE - this.width;
-                    const maxY = GRID_HEIGHT * TILE_SIZE - this.height;
-                    this.x = Math.max(0, Math.min(this.x, maxX));
-                    this.y = Math.max(0, Math.min(this.y, maxY));
+                    // Hard clamp to map bounds with padding
+                    const padding = 8;
+                    this.x = Math.max(padding, Math.min(this.x, GRID_WIDTH * TILE_SIZE - this.width - padding));
+                    this.y = Math.max(padding, Math.min(this.y, GRID_HEIGHT * TILE_SIZE - this.height - padding));
 
                     this.knockbackVx *= 0.92;
                     this.knockbackVy *= 0.92;
@@ -1461,11 +1549,10 @@
                         this.y = newY;
                     }
 
-                    // Clamp to map bounds
-                    const maxX = GRID_WIDTH * TILE_SIZE - this.width;
-                    const maxY = GRID_HEIGHT * TILE_SIZE - this.height;
-                    this.x = Math.max(0, Math.min(this.x, maxX));
-                    this.y = Math.max(0, Math.min(this.y, maxY));
+                    // Hard clamp to map bounds with padding
+                    const padding = 8;
+                    this.x = Math.max(padding, Math.min(this.x, GRID_WIDTH * TILE_SIZE - this.width - padding));
+                    this.y = Math.max(padding, Math.min(this.y, GRID_HEIGHT * TILE_SIZE - this.height - padding));
 
                     this.knockbackVx *= 0.92;
                     this.knockbackVy *= 0.92;
@@ -1516,11 +1603,10 @@
                     this.y = newY;
                 }
 
-                // Clamp to map bounds
-                const maxX = GRID_WIDTH * TILE_SIZE - this.width;
-                const maxY = GRID_HEIGHT * TILE_SIZE - this.height;
-                this.x = Math.max(0, Math.min(this.x, maxX));
-                this.y = Math.max(0, Math.min(this.y, maxY));
+                // Hard clamp to map bounds with padding
+                const paddingEnemy = 8;
+                this.x = Math.max(paddingEnemy, Math.min(this.x, GRID_WIDTH * TILE_SIZE - this.width - paddingEnemy));
+                this.y = Math.max(paddingEnemy, Math.min(this.y, GRID_HEIGHT * TILE_SIZE - this.height - paddingEnemy));
 
                 // Attack cooldown
                 if (this.attackCooldown > 0) {
@@ -1623,7 +1709,10 @@
                 this.characterType = characterType || 'deej';
 
                 this.tilemap = new Tilemap(GRID_WIDTH, GRID_HEIGHT);
-                this.player = new Player(GRID_WIDTH / 2 * TILE_SIZE, GRID_HEIGHT / 2 * TILE_SIZE, this.characterType);
+                // Safe spawn position with buffer
+                const safeX = Math.max(20, Math.min(GRID_WIDTH * TILE_SIZE - 32, GRID_WIDTH / 2 * TILE_SIZE));
+                const safeY = Math.max(20, Math.min(GRID_HEIGHT * TILE_SIZE - 32, GRID_HEIGHT / 2 * TILE_SIZE));
+                this.player = new Player(safeX, safeY, this.characterType);
                 this.enemies = [];
                 this.substances = [];
                 this.killCount = 0;
@@ -2200,12 +2289,26 @@
                     this.keys[e.key] = false;
                 });
 
+                // Prevent default mobile behaviors
+                const gameCanvas = this.canvas;
+                document.addEventListener('touchmove', function(e) {
+                    if (e.target === gameCanvas) {
+                        e.preventDefault();
+                    }
+                }, { passive: false });
+
                 // Mobile controls
                 const setupTouchControl = (buttonId, key) => {
                     const btn = document.getElementById(buttonId);
                     if (btn) {
-                        btn.addEventListener('touchstart', () => { this.keys[key] = true; });
-                        btn.addEventListener('touchend', () => { this.keys[key] = false; });
+                        btn.addEventListener('touchstart', (e) => {
+                            e.preventDefault();
+                            this.keys[key] = true;
+                        });
+                        btn.addEventListener('touchend', (e) => {
+                            e.preventDefault();
+                            this.keys[key] = false;
+                        });
                         btn.addEventListener('mousedown', () => { this.keys[key] = true; });
                         btn.addEventListener('mouseup', () => { this.keys[key] = false; });
                     }
@@ -2216,10 +2319,23 @@
                 setupTouchControl('arrowLeft', 'ArrowLeft');
                 setupTouchControl('arrowRight', 'ArrowRight');
 
-                // Restart button
-                document.getElementById('restartBtn').addEventListener('click', () => {
-                    location.reload();
+                // Touch feedback for substance buttons
+                document.querySelectorAll('.substance-slot, .dpad-btn, .menu-button').forEach(btn => {
+                    btn.addEventListener('touchstart', function() {
+                        this.style.opacity = '0.7';
+                    });
+                    btn.addEventListener('touchend', function() {
+                        this.style.opacity = '1';
+                    });
                 });
+
+                // Restart button
+                const restartBtn = document.getElementById('restartBtn');
+                if (restartBtn) {
+                    restartBtn.addEventListener('click', () => {
+                        location.reload();
+                    });
+                }
             }
         }
 

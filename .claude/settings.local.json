@@ -4,7 +4,10 @@
       "Bash(node -c DarkFantasyGame.html)",
       "Bash(git add:*)",
       "Bash(git commit -m \"Implement 7 playable characters and boss rush mode:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "mcp__Claude_Preview__preview_start",
+      "Bash(find /c/Users/dylan/.claude/code -maxdepth 3 -type f \\\\\\(-name *.sh -o -name *.bat -o -name *.cmd -o -name Makefile -o -name *.config.* \\\\\\))",
+      "Bash(git commit -m \"Fix character boundary spawning and implement full mobile optimization:*)"
     ]
   }
 }
